@@ -1,6 +1,6 @@
 .settings
-.project
 com
-spin.as
+.actionScriptProperties
+.project
 *.swf
 *.html

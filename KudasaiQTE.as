@@ -100,11 +100,12 @@ class KudasaiQTE extends MovieClip {
 	}
 
 	public function KeyDown(keyID:Number):Void {
+		trace("KeyDown -> " + keyID);
 		if (qtebase._currentFrame > 1 || !_visible) {
 			return;
 		}
 		var correct = keyID == targetkey;
-		Flash(!correct);
+		FadeOut();
 		Hit(correct);
 	}
 
@@ -130,20 +131,14 @@ class KudasaiQTE extends MovieClip {
 	// 	return penalty < 0.2 ? 0.2 : penalty;
 	// }
 
-	// thatll also fade out the base
-	private function Flash(red:Boolean):Void {
-		qtebase.gotoAndPlay(1 + red * 15);
-	}
-
 	// true for win, false for loss
+	// overwritten by the .dll
 	public function Hit(victory:Boolean):Void {
 		if (victory) {
 			trace("Win Game");
 		} else {
 			trace("Fail Game");
 		}
-		var kudasai = _global.skse.plugins.YameteKudasai;
-		kudasai.Result(victory);
 	}
 
 	public function FailGameConditional():Void {
@@ -151,8 +146,13 @@ class KudasaiQTE extends MovieClip {
 			trace("FGC -> Already registered outcome");
 			return;
 		}
-		Flash(true);
+		FadeOut();
 		Hit(false);
+	}
+
+	private function FadeOut():Void
+	{
+		qtebase.nextFrame();
 	}
 
 	/**
