@@ -13,17 +13,12 @@ class KudasaiQTE extends MovieClip {
 	private var smallQTE:MovieClip;
 	private var roundQTE:MovieClip;
 
-	private var _minX:Number;
-	private var _minY:Number;
-	private var _maxX:Number;
-	private var _maxY:Number;
+	var _minX:Number;
+	var _minY:Number;
+	var _maxX:Number;
+	var _maxY:Number;
 
 	// Animation Vars
-	var timer:MovieClip;
-	var spinner:MovieClip;
-	var spinner_mask:MovieClip;
-	var spinner_half:MovieClip;
-
 	var MeterTimeline:TimelineLite;
 	var percent:Number;
 
@@ -31,29 +26,44 @@ class KudasaiQTE extends MovieClip {
 	private var targetkey:Number;
 	private var qtebase:MovieClip;
 
+	private var _active:Boolean;
+
 	// Misc Vars
-	private var _loopID:Number;
+	private var _testLoopID:Number;
+	private var _tweenLoopID:Number;
 
 	// Initialization:
 	private function KudasaiQTE() {
 		super();
 		// constructor code
+		_active = false;
+		_visible = false;
+		_alpha = 0;
+
 		smallQTE._visible = false;
 		roundQTE._visible = false;
-		_visible = false;
+		smallQTE._alpha = 75;
+		roundQTE._alpha = 75;
 
 		MeterTimeline = new TimelineLite({paused:true});
 	}
 
+	/**
+	 * Testing
+	 */
 	private function onLoad():Void {
-		//_loopID = setInterval(this, "Test", 1500);
+		_testLoopID = setInterval(this, "Test", 500);
 	}
 
 	private function Test():Void {
-		clearInterval(_loopID);
-		Prepare(0.3);
+		clearInterval(_testLoopID);
+		_minX = 200;
+		_minY = 100;
+		_maxX = 1000;
+		_maxY = 650;
 		Key.addListener(this);
-		CreateGame(10,276);
+		CreateGame(5,30);
+		_visible = true;
 	}
 
 	public function onKeyDown():Void {
@@ -68,17 +78,7 @@ class KudasaiQTE extends MovieClip {
 	/**
 	 * SKSE
 	 */
-	// Prepare the Widget to display Keys
-	public function Prepare(offset:Number) {
-		_minX = 1920 * offset;
-		_minY = 1080 * offset;
-		_maxX = 1920 - _minX;
-		_maxY = 1080 - _minY;
-
-		_visible = true;
-	}
-
-	// Create a new QTE with the given key & time
+	// Update the Display Key & move it to the desired Position on Screen, then start the Timer
 	public function CreateGame(time:Number, key:Number):Void {
 		this.targetkey = key;
 		if (key <= 275 || key > 278) {
@@ -86,90 +86,74 @@ class KudasaiQTE extends MovieClip {
 		} else {
 			qtebase = roundQTE;
 		}
-		setposition(qtebase);
-		qtebase.gotoAndStop(1);
 		qtebase.input.gotoAndStop(targetkey);
-
-		timer = qtebase.timer;
-		spinner = timer.spinner;
-		spinner_mask = timer.spinner_mask;
-		spinner_half = timer.spinner_half;
-
-		qtebase._visible = true;
-		CreateTween(time);
-	}
-
-	public function KeyDown(keyID:Number):Void {
-		trace("KeyDown -> " + keyID);
-		if (qtebase._currentFrame > 1 || !_visible) {
-			return;
-		}
-		var correct = keyID == targetkey;
-		FadeOut();
-		Hit(correct);
-	}
-
-	/**
-	 * Game
-	 */
-	private function setposition(qte:MovieClip):Void {
+		// Set new Position
 		var rangeX = _maxX - _minX;
 		var rangeY = _maxY - _minY;
 		var newX = Math.random() * rangeX + _minX;
 		var newY = Math.random() * rangeY + _minY;
-		// trace("newX = " + newX);
-		// trace("newY = " + newY);
+		trace("new X Position = " + newX);
+		trace("new Y Position = " + newY);
 		_x = newX;
 		_y = newY;
+		// new delay
+		var delay = Math.random() * 2000 + 700;
+		_tweenLoopID = setInterval(this, "CreateTween", delay, time);
 	}
 
-	// private function createinputwindow():Number {
-	// 	var x = Math.random() * 10 - 5;
-	// 	var penalty = (-0.01) * Math.pow(x, 2) + (0.7 / difficulty);
-	// 	// trace("inputwindow -> x = " + x);
-	// 	// trace("inputwindoe -> pentalty = " + pentalty);
-	// 	return penalty < 0.2 ? 0.2 : penalty;
-	// }
+	// Invoked by the .dll on the first Keyboard/Controller Input. Only Invoked once per iteration
+	public function KeyDown(keyID:Number):Void {
+		if (!_active) {
+			return;
+		}
+		_active = false;
+		var result = keyID == targetkey
+		trace("Game End -> Result = " + result);
+		setMeterPercent(100);
+		TweenLite.to(this, 0.3, {_alpha:0, onComplete: _root.main.Callback});
+	}
+
+	// called by .dll when the game is supposed to end for w/e reason
+	public function ShutDown():Void {
+		if (!_active) {
+			return;
+		}
+		_active = false;
+		_alpha = 0;
+	}
+
 
 	// true for win, false for loss
 	// overwritten by the .dll
-	public function Hit(victory:Boolean):Void {
+	public function Callback(victory:Boolean):Void {
 		if (victory) {
 			trace("Win Game");
 		} else {
 			trace("Fail Game");
 		}
-	}
-
-	public function FailGameConditional():Void {
-		if (qtebase._currentFrame > 1) {
-			trace("FGC -> Already registered outcome");
-			return;
-		}
-		FadeOut();
-		Hit(false);
-	}
-
-	private function FadeOut():Void
-	{
-		qtebase.nextFrame();
+		CreateGame(5,30);
 	}
 
 	/**
 	 * Animation
 	 */
-	public function CreateTween(duration:Number):Void {
-		trace("Create Tween -> Duration = " + duration);
+	public function CreateTween(time:Number):Void {
+		clearInterval(_tweenLoopID);
+		trace("Create Tween -> Duration = " + time);
+		qtebase._visible = true;
+		_alpha = 100;
+		_active = true;
+
 		percent = 360 / 100;
 		setMeterPercent(0);
-		updateMeterPercent(100,duration);
+		updateMeterPercent(100,time);
 	}
 
 	// sets the meter percentage to a specific value, think of it like jumping straight to that value without a tween.
 	public function setMeterPercent(DesiredPercent:Number):Void {
 		MeterTimeline.clear();
 		DesiredPercent = doValueClamp(DesiredPercent);
-		spinner._rotation = percent * DesiredPercent;
+		qtebase.timer.spinner._rotation = percent * DesiredPercent;
 		checkApplyMask();
 	}
 
@@ -181,24 +165,24 @@ class KudasaiQTE extends MovieClip {
 			MeterTimeline.progress(0);
 			MeterTimeline.restart();
 		}
-		MeterTimeline.to(spinner,meterDuration,{_rotation:(percent * DesiredPercent), onUpdate:doUpdate, onUpdateParams:[this], onComplete:doComplete, onCompleteParams:[this], onReverseComplete:doComplete, onReverseCompleteParams:[this], onStart:doStart, onStartParams:[this]});
+		MeterTimeline.to(qtebase.timer.spinner,meterDuration,{_rotation:(percent * DesiredPercent), onUpdate:doUpdate, onUpdateParams:[this], onComplete:doComplete, onCompleteParams:[this], onReverseComplete:doComplete, onReverseCompleteParams:[this], onStart:doStart, onStartParams:[this]});
 		MeterTimeline.play();
 	}
 
 	public function checkApplyMask():Void {
-		if (spinner._rotation <= 0) {
-			spinner_mask._rotation = 0;
-			spinner_half._alpha = 100;
+		if (qtebase.timer.spinner._rotation <= 0) {
+			qtebase.timer.spinner_mask._rotation = 0;
+			qtebase.timer.spinner_half._alpha = 100;
 		} else {
-			spinner_mask._rotation = 180;
-			spinner_half._alpha = 0;
+			qtebase.timer.spinner_mask._rotation = 180;
+			qtebase.timer.spinner_half._alpha = 0;
 		}
 	}
 
 	// fires when a TweenLite completes the tween ( both forwards and reverse )
 	public function doComplete(mc:MovieClip):Void {
-		// trace("end");
-		mc.FailGameConditional();
+		trace("end");
+		mc.KeyDown(-1);
 	}
 
 	// fires when a TweenLite starts the tween.
