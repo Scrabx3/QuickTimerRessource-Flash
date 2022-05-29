@@ -52,7 +52,7 @@ class KudasaiQTE extends MovieClip {
 	 * Testing
 	 */
 	private function onLoad():Void {
-		_testLoopID = setInterval(this, "Test", 500);
+		// _testLoopID = setInterval(this, "Test", 500);
 	}
 
 	private function Test():Void {
@@ -110,7 +110,7 @@ class KudasaiQTE extends MovieClip {
 		var result = keyID == targetkey
 		trace("Game End -> Result = " + result);
 		setMeterPercent(100);
-		TweenLite.to(this, 0.3, {_alpha:0, onComplete: _root.main.Callback});
+		TweenLite.to(this, 0.2, {_alpha:0, onComplete: _root.main.Callback, onCompleteParams:[result, this]});
 	}
 
 	// called by .dll when the game is supposed to end for w/e reason
@@ -122,16 +122,15 @@ class KudasaiQTE extends MovieClip {
 		_alpha = 0;
 	}
 
-
 	// true for win, false for loss
 	// overwritten by the .dll
-	public function Callback(victory:Boolean):Void {
+	public function Callback(victory:Boolean, mc:MovieClip):Void {
 		if (victory) {
 			trace("Win Game");
 		} else {
 			trace("Fail Game");
 		}
-		CreateGame(5,30);
+		mc.CreateGame(5,30);
 	}
 
 	/**
