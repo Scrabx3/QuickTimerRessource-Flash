@@ -4,11 +4,6 @@ import com.greensock.plugins.*;
 // -> https://github.com/Osmosis-Wrench/flash-examples
 
 class KudasaiQTE extends MovieClip {
-
-	// Constants:
-	public static var CLASS_REF = KudasaiQTE;
-	public static var LINKAGE_ID:String = "KudasaiQTE";
-
 	// UI Elements:
 	private var smallQTE:MovieClip;
 	private var roundQTE:MovieClip;
@@ -48,19 +43,26 @@ class KudasaiQTE extends MovieClip {
 		MeterTimeline = new TimelineLite({paused:true});
 	}
 
-	/**
-	 * Testing
-	 */
-	private function onLoad():Void {
+	public function onLoad():Void {
 		// _testLoopID = setInterval(this, "Test", 500);
+		// Stage.scaleMode = "noScale";
+
+		// var stageObj = new Object();
+		// Stage.addListener(stageObj);
+		// stageObj.onResize = function()
+		// {
+		// 	_root.playground._width = Stage.width;
+		// 	_root.playground._height = Stage.height;
+		// };
+		// stageObj.onResize();
 	}
 
 	private function Test():Void {
 		clearInterval(_testLoopID);
-		_minX = 200;
-		_minY = 100;
-		_maxX = 1000;
-		_maxY = 650;
+		_minX = 384;
+		_minY = 216;
+		_maxX = 1536;
+		_maxY = 864;
 		Key.addListener(this);
 		CreateGame(5,30);
 		_visible = true;
@@ -94,11 +96,10 @@ class KudasaiQTE extends MovieClip {
 		var newY = Math.random() * rangeY + _minY;
 		trace("new X Position = " + newX);
 		trace("new Y Position = " + newY);
-		_x = newX;
-		_y = newY;
 		// new delay
-		var delay = Math.random() * 2000 + 700;
-		_tweenLoopID = setInterval(this, "CreateTween", delay, time);
+		var delay = Math.random() * 0.7 + 0.2;
+		trace("Delay = " + delay);
+		TweenLite.to(this, delay, {_y:newY, _x:newX, onComplete: _root.main.CreateTween, onCompleteParams:[time, this]});
 	}
 
 	// Invoked by the .dll on the first Keyboard/Controller Input. Only Invoked once per iteration
@@ -136,16 +137,16 @@ class KudasaiQTE extends MovieClip {
 	/**
 	 * Animation
 	 */
-	public function CreateTween(time:Number):Void {
-		clearInterval(_tweenLoopID);
+	public function CreateTween(time:Number, mc:MovieClip):Void {
+		// clearInterval(_tweenLoopID);
 		trace("Create Tween -> Duration = " + time);
-		qtebase._visible = true;
-		_alpha = 100;
-		_active = true;
+		mc.qtebase._visible = true;
+		mc._alpha = 100;
+		mc._active = true;
 
-		percent = 360 / 100;
-		setMeterPercent(0);
-		updateMeterPercent(100,time);
+		mc.percent = 360 / 100;
+		mc.setMeterPercent(0);
+		mc.updateMeterPercent(100,time);
 	}
 
 	// sets the meter percentage to a specific value, think of it like jumping straight to that value without a tween.
