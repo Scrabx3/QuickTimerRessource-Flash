@@ -84,6 +84,7 @@ class KudasaiQTE extends MovieClip {
 	 */
 	// Update the Display Key & move it to the desired Position on Screen, then start the Timer
 	public function CreateGame(time:Number, key:Number):Void {
+		trace("Creating new game with key = " + key)
 		this.targetkey = key;
 		if (key <= 275 || key > 278) {
 			qtebase = smallQTE;
