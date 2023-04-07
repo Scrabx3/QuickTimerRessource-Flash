@@ -31,8 +31,8 @@ class skyui.components.list.BasicList extends BSList
 	
   /* PRIVATE VARIABLES */
 
-  	private var _bRequestInvalidate: Boolean = false;
-  	private var _bRequestUpdate: Boolean = false;
+  private var _bRequestInvalidate: Boolean = false;
+  private var _bRequestUpdate: Boolean = false;
 	private var _invalidateRequestID: Number;
 	private var _updateRequestID: Number;
 	
@@ -43,7 +43,7 @@ class skyui.components.list.BasicList extends BSList
 
   /* PROPERTIES */
   
-  	public var topBorder: Number = 0;
+  public var topBorder: Number = 0;
 	public var bottomBorder: Number = 0;
 	public var leftBorder: Number = 0;
 	public var rightBorder: Number = 0;

@@ -1,348 +1,490 @@
-dynamic class gfx.controls.TextInput extends gfx.core.UIComponent
-{
-	var defaultText: String = "";
-	var soundMap = {theme: "default", focusIn: "focusIn", focusOut: "focusOut", textChange: "textChange"};
-	var _text: String = "";
-	var _maxChars: Number = 0;
-	var _editable: Boolean = true;
-	var actAsButton: Boolean = false;
-	var hscroll: Number = 0;
-	var changeLock: Boolean = false;
-	var __height;
-	var __width;
-	var _disabled;
-	var _focused;
-	var _height;
-	var _name;
-	var _password;
-	var _selectable;
-	var _width;
-	var constraints;
-	var defaultTextFormat;
-	var dispatchEvent;
-	var dispatchEventAndSound;
-	var focusEnabled;
-	var gotoAndPlay;
-	var initialized;
-	var isHtml;
-	var onPress;
-	var onRollOut;
-	var onRollOver;
-	var sizeIsInvalid;
-	var tabEnabled;
-	var textField;
+/**
+ * TextInput is an editable text field component used to capture textual user input. Similar to the Label, this component is merely a wrapper for a standard textField, and therefore supports the same capabilities of the textField such as password mode, maximum number of characters and HTML text. Only a handful of these properties are exposed by the component itself, while the rest can be modified by directly accessing the TextInput’s textField instance.
 
-	function TextInput()
+   The TextInput component should be used for input, since noneditable text can be displayed using the Label. Similar to the Label, developers may substitute standard textFields for TextInput components based on their requirements. However, when developing sophisticated UIs, especially for PC applications, the TextInput component provides valuable extended capabilities over the standard textField.
+
+   For starters, TextInput supports the focused and disabled state, which are not easily achieved with the standard textField. Due to the separated focus state, TextInput can support custom focus indicators, which are not included with the standard textField. Complex AS2 code is required to change the visual style of a standard textField, while the TextInput visual style can be configured easily on the timeline. The TextInput inspectable properties provide an easy workflow for designers and programmers who are not familiar with Flash Studio. Developers can also easily listen for events fired by the TextInput to create custom behaviors.
+
+   The TextInput also supports the standard selection and cut, copy, and paste functionality provided by the textField, including multi paragraph HTML formatted text. By default, the keyboard commands are select (Shift+Arrows), cut (Shift+Delete), copy (Ctrl+Insert), and paste (Shift+Insert).
+
+
+ 	<b>Inspectable Properties</b>
+	The inspectable properties of the TextInput component are:<ul>
+	<li><i>text</i>: Sets the text of the textField.</li>
+	<li><i>visible</i>: Hides the component if set to false.</li>
+	<li><i>disabled</i>: Disables the component if set to true.</li>
+	<li><i>editable</i>: Makes the TextInput non-editable if set to false.</li>
+	<li><i>maxChars</i>: A number greater than zero limits the number of characters that can be entered in the textField.</li>
+	<li><i>password</i>: If true, sets the textField to display '*' characters instead of the real characters. The value of the textField will be the real characters entered by the user – returned by the text property.</li>
+	<li><i>defaultText</i>: Text to display when the textField is empty. This text is formatted by the defaultTextFormat object, which is by default set to light gray and italics.</li>
+	<li><i>actAsButton</i>: If true, then the TextInput will behave similar to a Button when not focused and support rollOver and rollOut states. Once focused via mouse press or tab, the TextInput reverts to its normal mode until focus is lost.</li>
+    <li><i>enableInitCallback</i>: If set to true, _global.CLIK_loadCallback() will be fired when a component is loaded and _global.CLIK_unloadCallback will be called when the component is unloaded. These methods receive the instance name, target path, and a reference the component as parameters.  _global.CLIK_loadCallback and _global.CLIK_unloadCallback should be overridden from the game engine using GFx FunctionObjects.</li>
+	<li><i>soundMap</i>: Mapping between events and sound process. When an event is fired, the associated sound process will be fired via _global.gfxProcessSound, which should be overridden from the game engine using GFx FunctionObjects.</li></ul>
+
+	<b>States</b>
+	The CLIK TextInput component supports three states based on its focused and disabled properties. <ul>
+	<li>default or enabled state.</li>
+	<li>focused state, typically a represented by a highlighted border around the textField.</li>
+	<li>disabled state.</li></ul>
+
+	<b>Events</b>
+	All event callbacks receive a single Object parameter that contains relevant information about the event. The following properties are common to all events. <ul>
+	<li><i>type</i>: The event type.</li>
+	<li><i>target</i>: The target that generated the event.</li></ul>
+
+	The events generated by the TextInput component are listed below. The properties listed next to the event are provided in addition to the common properties.<ul>
+	<li><i>show</i>: The component’s visible property has been set to true at runtime.</li>
+	<li><i>hide</i>: The component’s visible property has been set to false at runtime.</li>
+	<li><i>focusIn</i>: The component has received focus.</li>
+	<li><i>focusOut</i>: The component has lost focus.</li>
+	<li><i>textChange</i>: The text field contents have changed.</li>
+	<li><i>rollOver</i>: The mouse cursor has rolled over the component when not focused. Only fired when the actAsButton property is set.<ul>
+		<li><i>controllerIdx</i>: The index of the mouse cursor used to generate the event (applicable only for multi-mouse-cursor environments). Number type. Values 0 to 3.</li></ul></li>
+	<li><i>rollOut</i>: The mouse cursor has rolled out of the component when not focused. Only fired when the actAsButton property is set.<ul>
+		<li><i>controllerIdx</i>: The index of the mouse cursor used to generate the event (applicable only for multi-mouse-cursor environments). Number type. Values 0 to 3.</</li></ul></li></ul>
+ */
+
+
+import System.capabilities;
+import gfx.core.UIComponent;
+import gfx.ui.InputDetails;
+import gfx.utils.Constraints;
+import gfx.utils.Locale;
+
+
+[InspectableList("disabled", "visible", "textID", "password", "maxChars", /*"restrict",*/ "editable", "actAsButton", "defaultText", "enableInitCallback", "soundMap")]
+class gfx.controls.TextInput extends UIComponent
+{
+	/* PUBLIC VARIABLES */
+
+	/** The default text to be shown when no text has been assigned or entered into this component. */
+	[Inspectable(verbose=1)]
+	public var defaultText: String = "";
+	/** The text format used to display the default text. By default it is set to color:0xAAAAAA and italic:true. */
+	public var defaultTextFormat: TextFormat;
+    /** Mapping between events and sound process */
+    [Inspectable(type="Object", defaultValue="theme:default,focusIn:focusIn,focusOut:focusOut,textChange:textChange")]
+    public var soundMap: Object = { theme:"default", focusIn:"focusIn", focusOut:"focusOut", textChange:"textChange" };
+
+
+	/* PRIVATE FUNCTIONS */
+
+	private var _text: String = "";
+	private var _password: Boolean;
+	private var _maxChars: Number = 0
+	//private var _restrict:String;
+	private var _editable: Boolean = true;
+	private var _selectable: Boolean;
+	private var isHtml: Boolean;
+	private var constraints: Constraints;
+	[Inspectable(defaultValue="false", verbose=1)]
+	private var actAsButton: Boolean = false;
+	private var hscroll: Number = 0;
+	private var changeLock: Boolean = false;
+
+
+	/* STAGE ELEMENTS */
+
+	/** A reference the on-stage TextField instance. Note that when state changes are made, the textField instance may change, so changes made to it externally may be lost. */
+	public var textField: TextField;
+
+
+	/* INITIALIZATION */
+
+	/**
+	 * The constructor is called when a TextInput or a sub-class of TextInput is instantiated on stage or by using {@code attachMovie()} in ActionScript. This component can <b>not</b> be instantiated using {@code new} syntax. When creating new components that extend TextInput, ensure that a {@code super()} call is made first in the constructor.
+	 */
+	public function TextInput()
 	{
 		super();
-		this.tabEnabled = !this._disabled;
-		this.focusEnabled = !this._disabled;
-		this.defaultTextFormat = this.textField.getNewTextFormat();
-		this.defaultTextFormat.italic = true;
-		this.defaultTextFormat.color = 11184810;
+		tabEnabled = !_disabled;
+		focusEnabled = !_disabled;
+		// Create a custom text format for the empty state (defaultTextFormat), which can be overridden by the user.
+		defaultTextFormat = textField.getNewTextFormat();
+		defaultTextFormat.italic = true;
+		defaultTextFormat.color = 0xAAAAAA;
 	}
 
-	function get textID()
+
+	/* PUBLIC FUNCTIONS */
+
+	/**
+	 * Set the {@code text} parameter of the component using the Locale class to look up a localized version of the text from the Game Engine. This property can be set with ActionScript, and is used when the text is set using the Component Inspector.
+	 */
+	[Inspectable(name="text")]
+	public function get textID(): String
 	{
 		return null;
 	}
 
-	function set textID(value)
+
+	public function set textID(value: String): Void
 	{
-		if (value != "") 
-		{
-			this.text = gfx.utils.Locale.getTranslatedString(value);
+		if (value != "") {
+			text = Locale.getTranslatedString(value);
 		}
 	}
 
-	function get text()
+
+	/**
+	 * Get and set the text of the component using ActionScript. The {@code text} property can only set plain text. For formatted text, use the {@code htmlText} property, or set {@code html=true}, and use {@code TextFormat} instead.
+	 */
+	public function get text(): String
 	{
-		return this._text;
+		return _text;
 	}
 
-	function set text(value)
+
+	public function set text(value: String)
 	{
-		this._text = value;
-		this.isHtml = false;
-		this.updateText();
+		_text = value;
+		isHtml = false;
+		updateText();
 	}
 
-	function get htmlText()
+
+	/**
+	 * Get and set the html text of the component. Html text can be formatted using the tags supported by ActionScript.
+	 */
+	public function get htmlText(): String
 	{
-		return this._text;
+		return _text;
 	}
 
-	function set htmlText(value)
+
+	public function set htmlText(value: String)
 	{
-		this._text = value;
-		this.isHtml = true;
-		this.updateText();
+		_text = value;
+		isHtml = true;
+		updateText();
 	}
 
-	function get editable()
+
+	/**
+	 * Determines if text can be entered into the TextArea, or if it is display-only. Text in a non-editable TextInput components can not be selected.
+	 */
+	[Inspectable(defaultValue="true")]
+	public function get editable(): Boolean
 	{
-		return this._editable;
+		return _editable;
 	}
 
-	function set editable(value)
+
+	public function set editable(value: Boolean): Void
 	{
-		this._editable = value;
-		this.tabEnabled = !this._disabled && !this._editable;
-		this.updateTextField();
+		_editable = value;
+		tabEnabled = !_disabled && !_editable;
+		updateTextField();
 	}
 
-	function get password()
+
+	/**
+	 * The "password" mode of the text field. When {@code true}, the component will show asterisks instead of the typed letters.
+	 */
+	[Inspectable(defaultValue="false")]
+	public function get password(): Boolean
 	{
-		return this.textField.password;
+		return textField.password;
 	}
 
-	function set password(value)
+
+	public function set password(value: Boolean): Void
 	{
-		this._password = this.textField.password = value;
+		_password = textField.password = value;
 	}
 
-	function get maxChars()
+
+	/**
+	 * The maximum number of characters that the field can contain.
+	 */
+	[Inspectable(defaultValue="0")]
+	public function get maxChars(): Number
 	{
-		return this._maxChars;
+		return _maxChars;
 	}
 
-	function set maxChars(value)
+
+	public function set maxChars(value: Number): Void
 	{
-		this._maxChars = this.textField.maxChars = value;
+		_maxChars = textField.maxChars = value;
 	}
 
-	function get disabled()
+
+	/*
+	//
+	// A string of the characters the the textField can contain. Characters not included can not be entered into the TextField using the keyboard, only ActionScript.  Set to an empty string or null to reset to all characters.
+	//
+	[Inspectable(defaultValue="")]
+	public function get restrict(): String
 	{
-		return this._disabled;
+		return _restrict;
 	}
 
-	function set disabled(value)
+
+	public function set restrict(value: String): Void
+	{
+		_restrict = textField.restrict = value;
+	}
+	*/
+
+
+	/**
+	 * Disable this component. Focus (along with keyboard events) and mouse events will be suppressed if disabled.
+	 */
+	[Inspectable(defaultValue="false", verbose="1")]
+	public function get disabled(): Boolean
+	{
+		return _disabled;
+	}
+
+
+	public function set disabled(value: Boolean): Void
 	{
 		super.disabled = value;
-		this.tabEnabled = !this._disabled;
-		this.focusEnabled = !this._disabled;
-		if (this.initialized) 
-		{
-			this.setMouseHandlers();
-			this.setState();
-			this.updateTextField();
+		tabEnabled = !_disabled;
+		focusEnabled = !_disabled;
+		if (initialized) {
+			setMouseHandlers();
+			setState();
+			updateTextField();
 		}
 	}
 
-	function appendText(text)
+
+	/**
+	 * Append a new string to the existing text. The textField will be set to non-html rendering when this method is invoked.
+	 */
+	public function appendText(text: String): Void
 	{
-		this._text = this._text + text;
-		if (this.isHtml) 
-		{
-			this.textField.html = false;
+		_text += text;
+		if (isHtml) {
+			textField.html = false;
 		}
-		this.isHtml = false;
-		this.textField.appendText(text);
+
+		isHtml = false;
+		textField.appendText(text);
 	}
 
-	function appendHtml(text)
+
+	/**
+	 * Append a new html string to the existing text. The textField will be set to html rendering when this method is invoked.
+	 */
+	public function appendHtml(text: String): Void
 	{
-		this._text = this._text + text;
-		if (!this.isHtml) 
-		{
-			this.textField.html = true;
+		_text += text;
+		if (!isHtml) {
+			textField.html = true;
 		}
-		this.isHtml = true;
-		this.textField.appendHtml(text);
+
+		isHtml = true;
+		textField.appendHtml(text);
 	}
 
-	function get length()
+
+	/**
+	 * The length of the text in the textField.
+	 */
+	public function get length(): Number
 	{
-		return this.textField.length;
+		return textField.length;
 	}
 
-	function handleInput(details, pathToFocus)
+
+	public function handleInput(details: InputDetails, pathToFocus: Array): Boolean
 	{
-		if (details.value != "keyDown" && details.value != "keyHold") 
-		{
+		if (details.value != "keyDown" && details.value != "keyHold") {
 			return false;
 		}
-		var __reg2 = details.controllerIdx;
-		if (Selection.getFocus(__reg2) != null) 
-		{
+
+		var controllerIdx: Number = details.controllerIdx;
+		if (Selection.getFocus(controllerIdx) != null) {
 			return false;
 		}
-		Selection.setFocus(this.textField, __reg2);
+
+		Selection.setFocus(textField, controllerIdx);
 		return true;
 	}
 
-	function toString()
+
+	/** @exclude */
+	public function toString(): String
 	{
-		return "[Scaleform TextInput " + this._name + "]";
+		return "[Scaleform TextInput " + _name + "]";
 	}
 
-	function configUI()
+
+	/* PRIVATE FUNCTIONS */
+
+	private function configUI(): Void
 	{
 		super.configUI();
-		this.constraints = new gfx.utils.Constraints(this, true);
-		this.constraints.addElement(this.textField, gfx.utils.Constraints.ALL);
-		this.setState();
-		this.updateTextField();
-		this.setMouseHandlers();
+
+		constraints = new Constraints(this, true);
+		constraints.addElement(textField, Constraints.ALL);
+
+		setState();
+		updateTextField();
+
+		setMouseHandlers();
 	}
 
-	function setState()
+
+	private function setState(): Void
 	{
-		this.gotoAndPlay(this._disabled ? "disabled" : (this._focused ? "focused" : "default"));
+		gotoAndPlay(_disabled ? "disabled" : (_focused ? "focused" : "default"));
 	}
 
-	function setMouseHandlers()
+
+	// Switch on/off the mouse handlers to support rollover/rollout behavior in addition to text input
+	private function setMouseHandlers(): Void
 	{
-		if (this.actAsButton != false) 
-		{
-			if (this._disabled || this._focused) 
-			{
-				delete this.onRollOver;
-				delete this.onRollOut;
-				delete this.onPress;
-				return;
-			}
-			if (this._editable) 
-			{
-				this.onRollOver = this.handleMouseRollOver;
-				this.onRollOut = this.handleMouseRollOut;
-				this.onPress = this.handleMousePress;
-			}
+		if (actAsButton == false) {
+			return;
+		}
+
+		if (_disabled || _focused) {
+			delete onRollOver;
+			delete onRollOut;
+			delete onPress;
+		} else if (_editable) {
+			onRollOver = handleMouseRollOver;
+			onRollOut = handleMouseRollOut;
+			onPress = handleMousePress;
 		}
 	}
 
-	function handleMousePress(controllerIdx, keyboardOrMouse, button)
+
+	// Give the component focus on mouse press
+	private function handleMousePress(controllerIdx: Number, keyboardOrMouse: Number, button: Number): Void
 	{
-		this.dispatchEvent({type: "press", controllerIdx: controllerIdx, button: button});
+		dispatchEvent( { type: "press", controllerIdx: controllerIdx, button: button } );
 		Selection.setFocus(this.textField, controllerIdx);
 	}
 
-	function handleMouseRollOver(controllerIdx)
+
+	// Play the rollover animation if one exists (the "over" keyframe)
+	private function handleMouseRollOver(controllerIdx: Number): Void
 	{
-		this.gotoAndPlay("default");
-		this.gotoAndPlay("over");
-		if (this.constraints) 
-		{
-			this.constraints.update(this.__width, this.__height);
+		gotoAndPlay("default");
+		gotoAndPlay("over");
+		if (constraints) {
+			constraints.update(__width, __height);
 		}
-		this.updateTextField();
-		this.dispatchEvent({type: "rollOver", controllerIdx: controllerIdx});
+
+		updateTextField();
+		dispatchEvent({type: "rollOver", controllerIdx: controllerIdx});
 	}
 
-	function handleMouseRollOut(controllerIdx)
+
+	// Play the rollout animation if one exists (the "out" keyframe)
+	private function handleMouseRollOut(controllerIdx: Number): Void
 	{
-		this.gotoAndPlay("default");
-		this.gotoAndPlay("out");
-		if (this.constraints) 
-		{
-			this.constraints.update(this.__width, this.__height);
+		gotoAndPlay("default");
+		gotoAndPlay("out");
+		if (constraints) {
+			constraints.update(__width, __height);
 		}
-		this.updateTextField();
-		this.dispatchEvent({type: "rollOut", controllerIdx: controllerIdx});
+
+		updateTextField();
+		dispatchEvent({type: "rollOut", controllerIdx: controllerIdx});
 	}
 
-	function draw()
+
+	private function draw(): Void
 	{
-		if (this.sizeIsInvalid) 
-		{
-			this._width = this.__width;
-			this._height = this.__height;
+		if (sizeIsInvalid) {
+			_width = __width;
+			_height = __height;
 		}
 		super.draw();
-		this.constraints.update(this.__width, this.__height);
+		constraints.update(__width, __height);
 	}
 
-	function changeFocus()
+
+	private function changeFocus(): Void
 	{
-		this.tabEnabled = !this._disabled;
-		if (!this._focused) 
-		{
-			this.hscroll = this.textField.hscroll;
+		tabEnabled = !_disabled;
+		if (!_focused) {
+			hscroll = textField.hscroll;
 		}
-		this.setState();
-		if (this.constraints) 
-		{
-			this.constraints.update(this.__width, this.__height);
+
+		setState();
+
+		if (constraints) {
+			constraints.update(__width, __height);
 		}
-		this.updateTextField();
-		if (this._focused && this.textField.type == "input") 
-		{
-			this.tabEnabled = false;
-			var __reg3 = Selection.getFocusBitmask(this);
-			var __reg2 = 0;
-			while (__reg2 < System.capabilities.numControllers) 
-			{
-				if ((__reg3 >> __reg2 & 1) != 0) 
-				{
-					Selection.setFocus(this.textField, __reg2);
-					if (this.textField.noAutoSelection) 
-					{
-						Selection.setSelection(this.textField.htmlText.length, this.textField.htmlText.length, __reg2);
-					}
-					else 
-					{
-						Selection.setSelection(0, this.textField.htmlText.length, __reg2);
-					}
+
+		updateTextField();
+		// Support Selection.setFocus on this component
+		// (handoff to the textField if not focused)
+		if (_focused && textField.type == "input") {
+			tabEnabled = false;
+			var controllerMask: Number = Selection["getFocusBitmask"](this);
+			for (var i: Number = 0; i < capabilities["numControllers"]; i++) {
+				if ( ((controllerMask >> i) & 0x1) != 0 ) {
+					Selection.setFocus(textField, i);
+					// Select all text (to mimic single line textField behavior)
+					if (textField.noAutoSelection) {
+                        Selection.setSelection(textField.htmlText.length, textField.htmlText.length, i);
+                    } else {
+                        Selection.setSelection(0, textField.htmlText.length, i);
+                    }
 				}
-				++__reg2;
 			}
 		}
-		this.setMouseHandlers();
-		this.textField.hscroll = this.hscroll;
+
+		setMouseHandlers();
+		// hscroll needs to be reset after losing focus
+		textField.hscroll = hscroll;
 	}
 
-	function updateText()
+
+	// Update the textField content
+	private function updateText(): Void
 	{
-		if (this._text != "") 
-		{
-			if (this.isHtml) 
-			{
-				this.textField.html = true;
-				this.textField.htmlText = this._text;
+		if (_text != "") {
+			if (isHtml) {
+				textField.html = true;
+				textField.htmlText = _text;
+			} else {
+				textField.html = false;
+				textField.text = _text;
 			}
-			else 
-			{
-				this.textField.html = false;
-				this.textField.text = this._text;
+		} else {
+			textField.text = "";
+			if (!_focused && defaultText != "") {
+				textField.text = defaultText;
+				textField.setTextFormat(defaultTextFormat);
 			}
-			return;
-		}
-		this.textField.text = "";
-		if (!this._focused && this.defaultText != "") 
-		{
-			this.textField.text = this.defaultText;
-			this.textField.setTextFormat(this.defaultTextFormat);
 		}
 	}
 
-	function updateTextField()
+
+	// Update the textField properties. Usually this just happens on a frame change.
+	private function updateTextField(): Void
 	{
-		if (this.textField != null) 
-		{
-			if (!this._selectable) 
-			{
-				this._selectable = this.textField.selectable;
-			}
-			this.updateText();
-			this.textField.maxChars = this._maxChars;
-			this.textField.noAutoSelection = true;
-			this.textField.password = this._password;
-			this.textField.selectable = this._disabled ? false : this._selectable || this._editable;
-			this.textField.type = this._editable && !this._disabled ? "input" : "dynamic";
-			this.textField.focusTarget = this;
-			this.textField.hscroll = this.hscroll;
-			this.textField.addListener(this);
+		if (textField != null) {
+			if (!_selectable) { _selectable = textField.selectable; }
+			updateText();
+			//textField.restrict = _restrict;
+			textField.maxChars = _maxChars;
+            textField.noAutoSelection = true;
+			textField.password = _password;
+			textField.selectable = _disabled ? false : (_selectable || _editable);
+			textField.type = (_editable && !_disabled) ? "input" : "dynamic";
+			textField["focusTarget"] = this;
+			textField.hscroll = hscroll;
+			textField.addListener(this);
 		}
 	}
 
-	function onChanged(target)
+
+	// The text in the textField has changed. Store the new value in case the frame changes, and dispatch an event.
+	private function onChanged(target: Object): Void
 	{
-		if (this.changeLock) 
-		{
-			return;
+		if (!changeLock) {
+			_text = isHtml ? textField.htmlText : textField.text;
+			dispatchEventAndSound( {type: "textChange" } );
 		}
-		this._text = this.isHtml ? this.textField.htmlText : this.textField.text;
-		this.dispatchEventAndSound({type: "textChange"});
 	}
-
 }

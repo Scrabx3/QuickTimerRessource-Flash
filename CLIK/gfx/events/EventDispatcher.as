@@ -1,162 +1,207 @@
-dynamic class gfx.events.EventDispatcher
+/**
+ * The EventDispatcher manages the notification mechanism used throughout the components. EventDispatcher can be inherited from, or mixed in to add notification capabilities to a class.  The Scaleform EventDispatcher mirrors the API in the Macromedia AS2 EventDispatcher, and the common methods found in the AS3 EventDispatcher, but also includes some enhancements, such as the {@link #removeAllEventListeners()} method.
+ */
+
+
+class gfx.events.EventDispatcher
 {
-	var _listeners;
+	/* PRIVATE VARIABLES */
 
-	function EventDispatcher()
-	{
-	}
+	private static var _instance: EventDispatcher;
+	private var _listeners: Object;
 
-	static function initialize(target)
+
+	/* INITIALIZATION */
+
+	/**
+	 * Create a new EventDispatcher, which is an Object capable of broadcasting events. It is more likely that the EventDispatcher will be extended, or the static {@code EventDispatcher.initialize()} method will be used to add event-broadcasting capabilities to a component.
+	 */
+	public function EventDispatcher()
+	{}
+
+
+	/* PUBLIC FUNCTIONS */
+
+	/**
+	 * Initialize a component or class, adding Event Dispatching capabilities to it.
+	 */
+	public static function initialize(target: Object): Void
 	{
-		if (gfx.events.EventDispatcher._instance == undefined) 
-		{
-			gfx.events.EventDispatcher._instance = new gfx.events.EventDispatcher();
+		if (_instance == undefined) {
+			_instance = new EventDispatcher();
 		}
-		target.dispatchEvent = gfx.events.EventDispatcher._instance.dispatchEvent;
-		target.dispatchQueue = gfx.events.EventDispatcher._instance.dispatchQueue;
-		target.hasEventListener = gfx.events.EventDispatcher._instance.hasEventListener;
-		target.addEventListener = gfx.events.EventDispatcher._instance.addEventListener;
-		target.removeEventListener = gfx.events.EventDispatcher._instance.removeEventListener;
-		target.removeAllEventListeners = gfx.events.EventDispatcher._instance.removeAllEventListeners;
-		target.cleanUpEvents = gfx.events.EventDispatcher._instance.cleanUpEvents;
-		_global.ASSetPropFlags(target, "dispatchQueue", 1);
+
+		target.dispatchEvent = _instance.dispatchEvent;
+		target.dispatchQueue = _instance.dispatchQueue;
+		target.hasEventListener = _instance.hasEventListener;
+		target.addEventListener = _instance.addEventListener;
+		target.removeEventListener = _instance.removeEventListener;
+		target.removeAllEventListeners = _instance.removeAllEventListeners;
+		target.cleanUpEvents = _instance.cleanUpEvents;
+		_global.ASSetPropFlags(target, "dispatchQueue", 1); // Hide the dispatchQueue property from introspection.
 	}
 
-	static function indexOfListener(listeners, scope, callBack)
+
+	/**
+	 * Subscribe a listener to an event.
+	 * @param event The type of event.
+	 * @param scope The scope of the listener.
+	 * @param callBack The function name to call on the listener.
+	 */
+	public function addEventListener(event: String, scope: Object, callBack: String): Void
 	{
-		var __reg3 = listeners.length;
-		var __reg2 = -1;
-		while (++__reg2 < __reg3) 
-		{
-			var __reg1 = listeners[__reg2];
-			if (__reg1.listenerObject == scope && __reg1.listenerFunction == callBack) 
-			{
-				return __reg2;
+		if (_listeners == undefined) {
+			_listeners = {};
+			_global.ASSetPropFlags(this, "_listeners", 1); // Hide the _listeners property from introspection.
+		}
+
+		var listeners: Array = _listeners[event];
+		if (listeners == undefined) {
+			_listeners[event] = listeners = [];
+		}
+
+		if (EventDispatcher.indexOfListener(listeners, scope, callBack) == -1) {
+			listeners.push({listenerObject: scope, listenerFunction: callBack});
+		}
+	}
+
+
+	/**
+	 * Unsubscribe a listener from an event.
+	 * @param event The type of event.
+	 * @param scope The scope of the listener.
+	 * @param callBack The function name to call on the listener.
+	 */
+	public function removeEventListener(event: String, scope: Object, callBack: String): Void
+	{
+		var listeners = _listeners[event];
+		if (listeners == undefined) {
+			return;
+		}
+
+		var index: Number = EventDispatcher.indexOfListener(listeners, scope, callBack);
+		if (index != -1) {
+			listeners.splice(index, 1);
+		}
+	}
+
+
+	/**
+	 * Dispatch an event to all listeners.
+	 * @param event The event object to dispatch to the listeners.
+	 */
+	public function dispatchEvent(event: Object): Void
+	{
+		if (event.type == "all") {
+			return;
+		}
+
+		if (event.target == undefined) {
+			event.target = this;
+		}
+
+		dispatchQueue(this, event);
+	}
+
+
+	/**
+	 * Check if a listener has been added for a specific event type.
+	 * @param event The event type
+	 * @param scope The scope of the listener.
+	 * @param callBack The function name to call on the listener.
+	 * @return If the component has a specific listener
+	 */
+	public function hasEventListener(event: String): Boolean
+	{
+		return _listeners[event] != null && _listeners[event].length > 0;
+	}
+
+
+	/**
+	 * Unsubscribe all listeners from a specific event, or all events.
+	 * @param event The type of event.
+	 */
+	public function removeAllEventListeners(event: String): Void
+	{
+		if (event == undefined) {
+			delete(_listeners);
+		} else {
+			delete(_listeners[event]);
+		}
+	}
+
+
+	/* PRIVATE FUNCTIONS */
+
+	private static function indexOfListener(listeners: Array, scope: Object, callBack: String): Number
+	{
+		var l: Number = listeners.length;
+		var i: Number = -1;
+		while (++i < l) {
+			var listener: Object = listeners[i];
+			if (listener.listenerObject == scope && listener.listenerFunction == callBack) {
+				return i;
 			}
 		}
 		return -1;
 	}
 
-	function addEventListener(event, scope, callBack)
+
+	private function dispatchQueue(dispatch: Object, event: Object): Void
 	{
-		if (this._listeners == undefined) 
-		{
-			this._listeners = {};
-			_global.ASSetPropFlags(this, "_listeners", 1);
+		var listeners: Array = dispatch._listeners[event.type];
+		if (listeners != undefined) {
+			EventDispatcher.$dispatchEvent(dispatch, listeners, event);
 		}
-		var __reg3 = this._listeners[event];
-		if (__reg3 == undefined) 
-		{
-			this._listeners[event] = __reg3 = [];
-		}
-		if (gfx.events.EventDispatcher.indexOfListener(__reg3, scope, callBack) == -1) 
-		{
-			__reg3.push({listenerObject: scope, listenerFunction: callBack});
+
+		listeners = dispatch._listeners["all"];
+		if (listeners != undefined) {
+			EventDispatcher.$dispatchEvent(dispatch, listeners, event);
 		}
 	}
 
-	function removeEventListener(event, scope, callBack)
+
+	private static function $dispatchEvent(dispatch: Object, listeners: Array, event: Object)
 	{
-		var __reg2 = this._listeners[event];
-		if (__reg2 != undefined) 
-		{
-			var __reg3 = gfx.events.EventDispatcher.indexOfListener(__reg2, scope, callBack);
-			if (__reg3 != -1) 
-			{
-				__reg2.splice(__reg3, 1);
+		var l: Number = listeners.length;
+		for (var i: Number = 0; i < l; i++) {
+			var listenerObject: Object = listeners[i].listenerObject;
+			var listenerType: String = typeof(listenerObject);
+			var listenerFunction: String = listeners[i].listenerFunction;
+
+			if (listenerFunction == undefined) {
+				listenerFunction = event.type;
 			}
-		}
-	}
 
-	function dispatchEvent(event)
-	{
-		if (event.type != "all") 
-		{
-			if (event.target == undefined) 
-			{
-				event.target = this;
-			}
-			this.dispatchQueue(this, event);
-		}
-	}
-
-	function hasEventListener(event)
-	{
-		return this._listeners[event] != null && this._listeners[event].length > 0;
-	}
-
-	function removeAllEventListeners(event)
-	{
-		if (event == undefined) 
-		{
-			delete(this._listeners);
-			return;
-		}
-		delete(this._listeners[event]);
-	}
-
-	function dispatchQueue(dispatch, event)
-	{
-		var __reg1 = dispatch._listeners[event.type];
-		if (__reg1 != undefined) 
-		{
-			gfx.events.EventDispatcher.$dispatchEvent(dispatch, __reg1, event);
-		}
-		__reg1 = dispatch._listeners.all;
-		if (__reg1 != undefined) 
-		{
-			gfx.events.EventDispatcher.$dispatchEvent(dispatch, __reg1, event);
-		}
-	}
-
-	static function $dispatchEvent(dispatch, listeners, event)
-	{
-		var __reg7 = listeners.length;
-		var __reg3 = 0;
-		for (;;) 
-		{
-			if (__reg3 >= __reg7) 
-			{
-				return;
-			}
-			var __reg1 = listeners[__reg3].listenerObject;
-			var __reg5 = typeof __reg1;
-			var __reg2 = listeners[__reg3].listenerFunction;
-			if (__reg2 == undefined) 
-			{
-				__reg2 = event.type;
-			}
-			if (__reg5 == "function") 
-			{
-				if (__reg1[__reg2] == null) 
-				{
-					__reg1.apply(dispatch, [event]);
+			if (listenerType != "function") {
+				if (listenerObject.handleEvent != undefined && listenerFunction == undefined) {
+					listenerObject.handleEvent(event);
+				} else {
+					listenerObject[listenerFunction](event);
 				}
-				else 
-				{
-					__reg1[__reg2](event);
-				}
+			} else if (listenerObject[listenerFunction] != null) { // class
+				listenerObject[listenerFunction](event);
+			} else { // function
+				listenerObject.apply(dispatch, [event]);
 			}
-			else if (__reg1.handleEvent != undefined && __reg2 == undefined) 
-			{
-				__reg1.handleEvent(event);
-			}
-			else 
-			{
-				__reg1[__reg2](event);
-			}
-			++__reg3;
 		}
 	}
 
-	function cleanUp()
+
+	/**
+	 * Clean up the EventDispatcher instance. The cleanUp method is not used to clean up EventDispatcher sub-classes, and is not mixed-in to components when the static initialize() method is used. Use {@link cleanUpEvents()} instead.
+	 */
+	public function cleanUp(): Void
 	{
-		this.cleanUpEvents();
+		cleanUpEvents();
 	}
 
-	function cleanUpEvents()
-	{
-		this.removeAllEventListeners();
-	}
 
+	/**
+	 * Clean up the mixed-in EventDispatcher methods in a component.
+	 */
+	private function cleanUpEvents(): Void
+	{
+		removeAllEventListeners();
+	}
 }

@@ -26,4 +26,5 @@ intrinsic class Stage
 	// scaleform extensions
 	static var visibleRect:Rectangle;
 	static var safeRect:Rectangle;
+	static var originalRect: Rectangle;
 }

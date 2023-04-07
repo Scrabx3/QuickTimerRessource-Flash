@@ -1,513 +1,600 @@
-dynamic class gfx.controls.ScrollingList extends gfx.controls.CoreList
-{
-	var wrapping: String = "normal";
-	var autoRowCount: Boolean = false;
-	var _scrollPosition: Number = 0;
-	var totalRenderers: Number = 0;
-	var autoScrollBar: Boolean = false;
-	var margin: Number = 1;
-	var paddingTop: Number = 0;
-	var paddingBottom: Number = 0;
-	var paddingLeft: Number = 0;
-	var paddingRight: Number = 0;
-	var thumbOffsetTop: Number = 0;
-	var thumbOffsetBottom: Number = 0;
-	var thumbSizeFactor: Number = 1;
-	var __height;
-	var __width;
-	var _dataProvider;
-	var _disabled;
-	var _focused;
-	var _height;
-	var _name;
-	var _parent;
-	var _rowHeight;
-	var _scrollBar;
-	var _selectedIndex;
-	var _width;
-	var _xscale;
-	var _yscale;
-	var container;
-	var createItemRenderer;
-	var drawRenderers;
-	var externalRenderers;
-	var focusEnabled;
-	var gotoAndPlay;
-	var initialized;
-	var inspectableScrollBar;
-	var invalidate;
-	var itemToLabel;
-	var renderers;
-	var sizeIsInvalid;
-	var tabEnabled;
+/**
+ * The ScrollingList is a list component that can scroll its elements. It can instantiate list items by itself or use existing list items on the stage. A ScrollIndicator or ScrollBar component can also be attached to this list component to provide scroll feedback and control. This component is populated via a DataProvider. The dataProvider is assigned via code, as shown in the example below:
+<i>scrollingList.dataProvider = ["item1", "item2", "item3", "item4", ];</i>
 
-	function ScrollingList()
+	<b>Inspectable Properties</b>
+	A MovieClip that derives from the ScrollingList component will have the following inspectable properties:<ul>
+	<li><i>visible</i>: Hides the component if set to false. This does not hide the attached scrollbar or any external list item renderers.</li>
+	<li><i>disabled</i>: Disables the component if set to true. This does disable both the attached scrollbar and the list items (both internally created and external renderers).</li>
+	<li><i>itemRenderer</i>: The symbol name of the ListItemRenderer. Used to create list item instances internally. Has no effect if the rendererInstanceName property is set.</li>
+	<li><i>rendererInstanceName</i>: Prefix of the external list item renderers to use with this ScrollingList component. The list item instances on the stage must be prefixed with this property value. If this property is set to the value ‘r’, then all list item instances to be used with this component must have the following values: ‘r1’, ‘r2’, ‘r3’,… The first item should have the number 1.</li>
+	<li><i>scrollBar</i>: Instance name of a ScrollBar component on the stage or a symbol name. If an instance name is specified, then the ScrollingList will hook into that instance. If a symbol name is specified, an instance of the symbol will be created by the ScrollingList.</li>
+	<li><i>margin</i>: The margin between the boundary of the list component and the list items created internally. This value has no effect if the rendererInstanceName property is set. This margin also affects the automatically generated scrollbar.</li>
+	<li><i>rowHeight</i>: The height of list item instances created internally. This value has no effect if the rendererInstanceName property is set.</li>
+	<li><i>paddingTop:</i>Extra padding at the top for the list items. This value has no effect if the rendererInstanceName property is set. Does not affect the automatically generated scrollbar.</li>
+	<li><i>paddingBottom:</i>Extra padding at the bottom for the list items. This value has no effect if the rendererInstanceName property is set. Does not affect the automatically generated scrollbar.</li>
+	<li><i>paddingLeft:</i>Extra padding on the left side for the list items. This value has no effect if the rendererInstanceName property is set. Does not affect the automatically generated scrollbar.</li>
+	<li><i>paddingRight:</i>Extra padding on the right side for the list items. This value has no effect if the rendererInstanceName property is set. Does not affect the automatically generated scrollbar.</li>
+	<li><i>thumbOffsetTop:</i>Scrollbar thumb top offset. This property has no effect if the list does not automatically create a scrollbar instance.</li>
+	<li><i>thumbOffsetBottom:</i>Scrollbar thumb bottom offset. This property has no effect if the list does not automatically create a scrollbar instance.</li>
+	<li><i>thumbSizeFactor:</i>Page size factor for the scrollbar thumb. A value greater than 1.0 will increase the thumb size by the given factor. This positive value has no effect if a scrollbar is not attached to the list.
+	<li><i>enableInitCallback</i>: If set to true, _global.CLIK_loadCallback() will be fired when a component is loaded and _global.CLIK_unloadCallback will be called when the component is unloaded. These methods receive the instance name, target path, and a reference the component as parameters.  _global.CLIK_loadCallback and _global.CLIK_unloadCallback should be overridden from the game engine using GFx FunctionObjects.</li>
+	<li><i>soundMap</i>: Mapping between events and sound process. When an event is fired, the associated sound process will be fired via _global.gfxProcessSound, which should be overridden from the game engine using GFx FunctionObjects.</li></ul>
+
+	<b>States</b>
+	The ScrollingList component supports three states based on its focused and disabled properties. <ul>
+	<li>default or enabled state.</li>
+	<li>focused state, that typically highlights the component’s border area.</li>
+	<li>disabled state.</li></ul>
+
+	<b>Events</b>
+	All event callbacks receive a single Object parameter that contains relevant information about the event. The following properties are common to all events. <ul>
+	<li><i>type</i>: The event type.</li>
+	<li><i>target</i>: The target that generated the event.</li></ul>
+
+	The events generated by the ScrollingList component are listed below. The properties listed next to the event are provided in addition to the common properties.<ul>
+	<li><i>show</i>: The component’s visible property has been set to true at runtime.</li>
+	<li><i>hide</i>: The component’s visible property has been set to false at runtime.</li>
+	<li><i>focusIn</i>: The component has received focus.</li>
+	<li><i>focusOut</i>: The component has lost focus.</li>
+	<li><i>change</i>: The selected index has changed.<ul>
+		<li><i>index</i>: The new selected index. Number type. Values 0 to number of list items minus 1. </li></ul></li>
+	<li><i>itemPress</i>: The list item has been pressed down.<ul>
+		<li><i>renderer</i>: The list item that was pressed. CLIK Button type.</li>
+		<li><i>item</i>: The data associated with the list item. This value is retrieved from the list’s DataProvider. AS2 Object type.</li>
+		<li><i>index</i>: The index of the list item relative to the list’s DataProvider. Values 0 to number of list items minus 1. </li>
+		<li><i>controllerIdx</i>: The index of the mouse cursor used to generate the event (applicable only for multi-mouse-cursor environments). Number type. Values 0 to 3.</li></ul></li>
+	<li><i>itemClick</i>: A list item has been clicked.<ul>
+		<li><i>renderer</i>: The list item that was clicked. CLIK Button type. </li>
+		<li><i>item</i>: The data associated with the list item. This value is retrieved from the list’s DataProvider. AS2 Object type.</li>
+		<li><i>index</i>: The index of the list item relative to the list’s DataProvider. Values 0 to number of list items minus 1. </li>
+		<li><i>controllerIdx</i>: The index of the mouse cursor used to generate the event (applicable only for multi-mouse-cursor environments). Number type. Values 0 to 3.</li></ul></li>
+	<li><i>itemDoubleClick</i>: The mouse cursor has been double clicked.<ul>
+		<li><i>renderer</i>: The list item was double clicked. CLIK Button type. </li>
+		<li><i>item</i>: The data associated with the list item. This value is retrieved from the list’s DataProvider. AS2 Object type.</li>
+		<li><i>index</i>: The index of the list item relative to the list’s DataProvider. Values 0 to number of list items minus 1. </li>
+		<li><i>controllerIdx</i>: The index of the mouse cursor used to generate the event (applicable only for multi-mouse-cursor environments). Number type. Values 0 to 3.</li></ul></li>
+	<li><i>itemRollOver</i>: The mouse cursor has rolled over a list item.<ul>
+		<li><i>renderer</i>: The list item that was rolled over.CLIK Button type. </li>
+		<li><i>item</i>: The data associated with the list item. This value is retrieved from the list’s DataProvider. AS2 Object type.</li>
+		<li><i>index</i>: The index of the list item relative to the list’s DataProvider. Values 0 to number of list items minus 1. </li>
+		<li><i>controllerIdx</i>: The index of the mouse cursor used to generate the event (applicable only for multi-mouse-cursor environments). Number type. Values 0 to 3.</li></ul></li>
+	<li><i>itemRollOut</i>: The mouse cursor has rolled out of a list item.<ul>
+		<li><i>renderer</i>: The list item that was rolled out of.CLIK Button type. </li>
+		<li><i>item</i>: The data associated with the list item. This value is retrieved from the list’s DataProvider. AS2 Object type.</li>
+		<li><i>index</i>: The index of the list item relative to the list’s DataProvider.Values 0 to number of list items minus 1. </li>
+		<li><i>controllerIdx</i>: The index of the mouse cursor used to generate the event (applicable only for multi-mouse-cursor environments). Number type. Values 0 to 3.</li></ul></li></ul>
+ */
+
+
+import gfx.controls.CoreList;
+import gfx.ui.InputDetails;
+import gfx.ui.NavigationCode;
+
+
+[InspectableList("disabled", "visible", "itemRenderer", "inspectableScrollBar", "rowHeight", "inspectableRendererInstanceName", "margin", "paddingTop", "paddingBottom", "paddingLeft", "paddingRight", "thumbOffsetBottom", "thumbOffsetTop", "thumbSizeFactor", "enableInitCallback", "soundMap")]
+class gfx.controls.ScrollingList extends CoreList
+{
+	/* PUBLIC VARIABLES */
+
+	/**
+	 * Determines how focus "wraps" when the end or beginning of the component is reached.
+	 	<ul>
+		<li>"normal": The focus will leave the component when it reaches the end of the data</li>
+		<li>"wrap": The selection will wrap to the beginning or end.</li>
+		<li>"stick": The selection will stop when it reaches the end of the data.</li>
+		</ul>
+	 */
+	public var wrapping: String = "normal";
+	/** Determines if the "rowCount" property is applied directly, or converted by the component. ScrollingList does not use autoRowCount, but includes it for consistency. **/
+	public var autoRowCount: Boolean = false;
+
+
+	/* PRIVATE VARIABLES */
+
+	private var _rowHeight: Number;
+	private var _scrollPosition: Number = 0;
+	private var _rowCount: Number;
+	private var totalRenderers: Number = 0;
+	[Inspectable(name="scrollBar", type="String")]
+	private var inspectableScrollBar: Object;
+	private var autoScrollBar: Boolean = false; // Determines if the scrollbar has been auto-created for this component
+
+	[Inspectable(defaultValue="1", verbose=1)]
+	private var margin: Number = 1;
+	[Inspectable(defaultValue="0", verbose=1)]
+	private var paddingTop: Number = 0;
+	[Inspectable(defaultValue="0", verbose=1)]
+	private var paddingBottom: Number = 0;
+	[Inspectable(defaultValue="0", verbose=1)]
+	private var paddingLeft: Number = 0;
+	[Inspectable(defaultValue="0", verbose=1)]
+	private var paddingRight: Number = 0;
+	[Inspectable(defaultValue="0", verbose=1)]
+	private var thumbOffsetTop: Number = 0;
+	[Inspectable(defaultValue="0", verbose=1)]
+	private var thumbOffsetBottom: Number = 0;
+	[Inspectable(defaultValue="1.0", verbose=1)]
+	private var thumbSizeFactor: Number = 1.0;
+
+
+	/* STAGE ELEMENTS */
+
+	private var _scrollBar: MovieClip;
+
+
+	/* INITIALIZATION */
+
+	/**
+	 * The constructor is called when a ScrollingList or a sub-class of ScrollingList is instantiated on stage or by using {@code attachMovie()} in ActionScript. This component can <b>not</b> be instantiated using {@code new} syntax. When creating new components that extend ScrollingList, ensure that a {@code super()} call is made first in the constructor.
+	 */
+	public function ScrollingList()
 	{
 		super();
 	}
 
-	function get scrollBar()
+
+	/* PUBLIC FUNCTIONS */
+
+	/**
+	 * The component to use to scroll the list. The {@code scrollBar} can be set as a library linkage ID, an instance name on the stage relative to the component, or a reference to an existing ScrollBar elsewhere in the application. The automatic behaviour in this component only supports a vertical scrollBar, positioned on the top right, the entire height of the component.
+	 * @see ScrollBar
+	 * @see ScrollIndicator
+	 */
+	public function get scrollBar(): Object
 	{
-		return this._scrollBar;
+		return _scrollBar;
 	}
 
-	function set scrollBar(value)
+
+	public function set scrollBar(value: Object): Void
 	{
-		if (!this.initialized) 
-		{
-			this.inspectableScrollBar = value;
+		if (!initialized) {
+			inspectableScrollBar = value;
 			return;
 		}
-		if (this._scrollBar != null) 
-		{
-			this._scrollBar.removeEventListener("scroll", this, "handleScroll");
-			this._scrollBar.removeEventListener("change", this, "handleScroll");
-			this._scrollBar.focusTarget = null;
-			if (this.autoScrollBar) 
-			{
-				this._scrollBar.removeMovieClip();
+
+		if (_scrollBar != null) {
+			_scrollBar.removeEventListener("scroll", this, "handleScroll");
+			_scrollBar.removeEventListener("change", this, "handleScroll");
+			_scrollBar.focusTarget = null;
+			if (autoScrollBar) {
+				_scrollBar.removeMovieClip();	// Clean up auto-created scrollbars only!
 			}
 		}
-		this.autoScrollBar = false;
-		if (typeof value == "string") 
-		{
-			this._scrollBar = MovieClip(this._parent[value.toString()]);
-			if (this._scrollBar == null) 
-			{
-				this._scrollBar = this.container.attachMovie(value.toString(), "_scrollBar", 1000, {offsetTop: this.thumbOffsetTop, offsetBottom: this.thumbOffsetBottom});
-				if (this._scrollBar != null) 
-				{
-					this.autoScrollBar = true;
+
+		autoScrollBar = false; // Reset
+		if (typeof(value) == "string") {
+			_scrollBar = MovieClip(_parent[value.toString()]); // Outside reference by name
+			if (_scrollBar == null) {
+				_scrollBar = container.attachMovie(value.toString(), "_scrollBar", 1000, { offsetTop: thumbOffsetTop, offsetBottom: thumbOffsetBottom } ); // Created using linkage
+				if (_scrollBar != null) {
+					autoScrollBar = true;
+					//if (_scrollBar.scale9Grid == null) { _scrollBar.scale9Grid = new Rectangle(0, 16, 1, 1); }
 				}
 			}
+		} else { // Outside reference
+			_scrollBar = MovieClip(value);
 		}
-		else 
-		{
-			this._scrollBar = MovieClip(value);
-		}
-		this.invalidate();
-		if (this._scrollBar != null) 
-		{
-			if (this._scrollBar.setScrollProperties == null) 
-			{
-				this._scrollBar.addEventListener("change", this, "handleScroll");
-			}
-			else 
-			{
-				this._scrollBar.addEventListener("scroll", this, "handleScroll");
-			}
-			this._scrollBar.focusTarget = this;
-			this._scrollBar.tabEnabled = false;
-			this.updateScrollBar();
+
+		invalidate(); // Redraw to reset scrollbar bounds, even if there is no scrollBar.
+
+		if (_scrollBar == null) {
 			return;
 		}
+
+		// Now that we have a scrollBar, lets set it up.
+		if (_scrollBar.setScrollProperties != null) {
+			_scrollBar.addEventListener("scroll", this, "handleScroll");
+		} else {
+			_scrollBar.addEventListener("change", this, "handleScroll");
+		}
+		_scrollBar.focusTarget = this;
+		_scrollBar.tabEnabled = false;
+		updateScrollBar();
 	}
 
-	function get rowHeight()
+
+	/**
+	 * The height of each item in the list.  When set to {@code null} or 0, the default height of the renderer symbol is used.
+	 */
+	[Inspectable(defaultValue="0")]
+	public function get rowHeight(): Number
 	{
-		return this._rowHeight;
+		return _rowHeight;
 	}
 
-	function set rowHeight(value)
+
+	public function set rowHeight(value: Number): Void
 	{
-		if (value == 0) 
-		{
+		if (value == 0) {
 			value = null;
 		}
-		this._rowHeight = value;
-		this.invalidate();
+
+		_rowHeight = value;
+		invalidate();
 	}
 
-	function get scrollPosition()
+
+	/**
+	 * The vertical scroll position of the list.
+	 */
+	public function get scrollPosition(): Number
 	{
-		return this._scrollPosition;
+		return _scrollPosition;
 	}
 
-	function set scrollPosition(value)
+
+	public function set scrollPosition(value: Number): Void
 	{
-		value = Math.max(0, Math.min(this._dataProvider.length - this.totalRenderers, Math.round(value)));
-		if (this._scrollPosition != value) 
-		{
-			this._scrollPosition = value;
-			this.invalidateData();
-			this.updateScrollBar();
+		value = Math.max(0, Math.min(_dataProvider.length - totalRenderers, Math.round(value)));
+		if (_scrollPosition == value) {
 			return;
 		}
+
+		_scrollPosition = value;
+		invalidateData();
+		updateScrollBar();
 	}
 
-	function get selectedIndex()
+
+	/**
+	 * The selected index of the {@code dataProvider}.  The {@code itemRenderer} at the {@code selectedIndex} will be set to {@code selected=true}.
+	 */
+	public function get selectedIndex(): Number
 	{
-		return this._selectedIndex;
+		return _selectedIndex;
 	}
 
-	function set selectedIndex(value)
+
+	public function set selectedIndex(value: Number): Void
 	{
-		if (value != this._selectedIndex) 
-		{
-			var __reg3 = this.getRendererAt(this._selectedIndex);
-			if (__reg3 != null) 
-			{
-				__reg3.selected = false;
-			}
-			super.selectedIndex = value;
-			if (this.totalRenderers != 0) 
-			{
-				__reg3 = this.getRendererAt(this._selectedIndex);
-				if (__reg3 == null) 
-				{
-					this.scrollToIndex(this._selectedIndex);
-					this.getRendererAt(this._selectedIndex).displayFocus = true;
-				}
-				else 
-				{
-					__reg3.selected = true;
-				}
-				return;
-			}
+		if (value == _selectedIndex) {
+			return;
+		}
+
+		var renderer: MovieClip = getRendererAt(_selectedIndex);
+		if (renderer != null) {
+            renderer.selected = false; // Only reset items in range
+		}
+		super.selectedIndex = value;
+		if (totalRenderers == 0) {
+			return;
+		}
+		renderer = getRendererAt(_selectedIndex);
+		if (renderer != null) {
+			renderer.selected = true; // Item is in range. Just set it.
+		} else {
+			scrollToIndex(_selectedIndex); // Will redraw
+		    getRendererAt(_selectedIndex).displayFocus = true;
 		}
 	}
 
-	function get disabled()
+
+	[Inspectable(defaultValue="false", verbose="1")]
+	public function get disabled(): Boolean
 	{
-		return this._disabled;
+		return _disabled;
 	}
 
-	function set disabled(value)
+
+	public function set disabled(value: Boolean): Void
 	{
 		super.disabled = value;
-		if (this.initialized) 
-		{
-			this.setState();
+		if (initialized) {
+			setState();
 		}
 	}
 
-	function scrollToIndex(index)
+
+	/**
+	 * Scroll the list to the specified index.  If the index is currently visible, the position will not change. The scroll position will only change the minimum amount it has to to display the item at the specified index.
+	 * @param index The index to scroll to.
+	 */
+	public function scrollToIndex(index: Number): Void
 	{
-		if (this.totalRenderers != 0) 
-		{
-			if (index >= this._scrollPosition && index < this._scrollPosition + this.totalRenderers) 
-			{
-				return undefined;
-			}
-			if (index < this._scrollPosition) 
-			{
-				this.scrollPosition = index;
-				return;
-			}
-			this.scrollPosition = index - (this.totalRenderers - 1);
+		if (totalRenderers == 0) {
+			return;
+		}
+
+		if (index >= _scrollPosition && index < _scrollPosition + totalRenderers) {
+			return;
+		} else if (index < _scrollPosition) {
+			scrollPosition = index;
+		} else {
+			scrollPosition = index - (totalRenderers - 1);
 		}
 	}
 
-	function get rowCount()
+
+	/**
+	 * The amount of visible rows.  Setting this property will immediately change the height of the component to accommodate the specified amount of rows. The {@code rowCount} property is not stored or maintained.
+	 */
+	public function get rowCount(): Number
 	{
-		return this.totalRenderers;
+		return totalRenderers;
 	}
 
-	function set rowCount(value)
+
+	public function set rowCount(value: Number): Void
 	{
-		var __reg3 = this._rowHeight;
-		if (__reg3 == null) 
-		{
-			var __reg2 = this.renderers[0];
-			if (__reg2 == null) 
-			{
-				__reg2 = this.createItemRenderer(0);
-				if (__reg2 == null) 
-				{
+		var h: Number = _rowHeight;
+		if (h == null) {
+			var item:MovieClip = renderers[0];
+			if (item == null) {
+				item = createItemRenderer(0);
+				if (item == null) {
 					return;
 				}
-				__reg3 = __reg2._height;
-				__reg2.removeMovieClip();
+
+				h = item._height; // It would be preferable to use the height property instead. however due to asynchronous loading, we can not.
+				item.removeMovieClip();
+			} else {
+				h = item.height;
 			}
-			else 
-			{
-				__reg3 = __reg2.height;
-			}
-			if (__reg3 == null || __reg3 == 0) 
-			{
+
+			if (h == null || h == 0) {
 				return;
 			}
 		}
-		this.height = __reg3 * value + this.margin * 2 + this.paddingTop + this.paddingBottom;
+
+		height = (h * value) + (margin * 2) + paddingTop + paddingBottom;
 	}
 
-	function invalidateData()
+
+	public function invalidateData(): Void
 	{
-		this._scrollPosition = Math.min(Math.max(0, this._dataProvider.length - this.totalRenderers), this._scrollPosition);
-		this.selectedIndex = Math.min(this._dataProvider.length - 1, this._selectedIndex);
-		this._dataProvider.requestItemRange(this._scrollPosition, Math.min(this._dataProvider.length - 1, this._scrollPosition + this.totalRenderers - 1), this, "populateData");
+		_scrollPosition = Math.min(Math.max(0, _dataProvider.length - totalRenderers), _scrollPosition);
+		selectedIndex = Math.min(_dataProvider.length - 1, _selectedIndex);
+		_dataProvider.requestItemRange(_scrollPosition, Math.min(_dataProvider.length - 1, _scrollPosition + totalRenderers - 1), this, "populateData");
+		// Set pending items to "waiting" state.
 	}
 
-	function handleInput(details, pathToFocus)
+
+	public function handleInput(details: InputDetails, pathToFocus: Array): Boolean
 	{
-		if (pathToFocus == null) 
-		{
+		// Pass on to selected renderer first
+		if (pathToFocus == null) {
 			pathToFocus = [];
 		}
-		var __reg3 = this.getRendererAt(this._selectedIndex);
-		if (__reg3 != null && __reg3.handleInput != null) 
-		{
-			var __reg6 = __reg3.handleInput(details, pathToFocus.slice(1));
-			if (__reg6) 
-			{
+		var renderer: MovieClip = getRendererAt(_selectedIndex);
+		if (renderer != null && renderer.handleInput != null) {
+			var handled: Boolean = renderer.handleInput(details, pathToFocus.slice(1));
+			if (handled) {
 				return true;
 			}
 		}
-		var __reg2 = details.value == "keyDown" || details.value == "keyHold";
-		if ((__reg0 = details.navEquivalent) === gfx.ui.NavigationCode.UP) 
-		{
-			if (this._selectedIndex > 0) 
-			{
-				if (__reg2) 
-				{
-					this.selectedIndex = (this.selectedIndex - 1);
+
+		// Only allow actions on key down, but still return true when it would otherwise be handled.
+		var keyPress: Boolean = (details.value == "keyDown" || details.value == "keyHold");
+		switch(details.navEquivalent) {
+			case NavigationCode.UP:
+				if (_selectedIndex > 0) {
+					if (keyPress) {
+						selectedIndex--;
+					}
+					return true;
+				} else if (wrapping == "stick") {
+					return true;
+				} else if (wrapping == "wrap") {
+					if (keyPress) {
+						selectedIndex = _dataProvider.length - 1;
+					}
+					return true;
+				} else {
+					return false;
+				}
+				break;
+
+			case NavigationCode.DOWN:
+				if (_selectedIndex < _dataProvider.length - 1) {
+					if (keyPress) {
+						selectedIndex++;
+					}
+					return true;
+				} else if (wrapping == "stick") {
+					return true;
+				} else if (wrapping == "wrap") {
+					if (keyPress) {
+						selectedIndex = 0;
+					}
+					return true;
+				} else {
+					return false;
+				}
+				break;
+
+			case NavigationCode.END:
+				if (!keyPress) {
+					selectedIndex = _dataProvider.length - 1;
 				}
 				return true;
-			}
-			else if (this.wrapping == "stick") 
-			{
-				return true;
-			}
-			else if (this.wrapping == "wrap") 
-			{
-				if (__reg2) 
-				{
-					this.selectedIndex = this._dataProvider.length - 1;
+
+			case NavigationCode.HOME:
+				if (!keyPress) {
+					selectedIndex = 0;
 				}
 				return true;
-			}
-			else 
-			{
-				return false;
-			}
-		}
-		else if (__reg0 === gfx.ui.NavigationCode.DOWN) 
-		{
-			if (this._selectedIndex < this._dataProvider.length - 1) 
-			{
-				if (__reg2) 
-				{
-					this.selectedIndex = (this.selectedIndex + 1);
+
+			case NavigationCode.PAGE_UP:
+				if (keyPress) {
+					selectedIndex = Math.max(0, _selectedIndex - totalRenderers);
 				}
 				return true;
-			}
-			else if (this.wrapping == "stick") 
-			{
-				return true;
-			}
-			else if (this.wrapping == "wrap") 
-			{
-				if (__reg2) 
-				{
-					this.selectedIndex = 0;
+
+			case NavigationCode.PAGE_DOWN:
+				if (keyPress) {
+					selectedIndex = Math.min(_dataProvider.length - 1, _selectedIndex + totalRenderers);
 				}
 				return true;
-			}
-			else 
-			{
-				return false;
-			}
-		}
-		else if (__reg0 === gfx.ui.NavigationCode.END) 
-		{
-			if (!__reg2) 
-			{
-				this.selectedIndex = this._dataProvider.length - 1;
-			}
-			return true;
-		}
-		else if (__reg0 === gfx.ui.NavigationCode.HOME) 
-		{
-			if (!__reg2) 
-			{
-				this.selectedIndex = 0;
-			}
-			return true;
-		}
-		else if (__reg0 === gfx.ui.NavigationCode.PAGE_UP) 
-		{
-			if (__reg2) 
-			{
-				this.selectedIndex = Math.max(0, this._selectedIndex - this.totalRenderers);
-			}
-			return true;
-		}
-		else if (__reg0 === gfx.ui.NavigationCode.PAGE_DOWN) 
-		{
-			if (__reg2) 
-			{
-				this.selectedIndex = Math.min(this._dataProvider.length - 1, this._selectedIndex + this.totalRenderers);
-			}
-			return true;
 		}
 		return false;
 	}
 
-	function get availableWidth()
+
+	public function get availableWidth(): Number
 	{
-		return this.autoScrollBar ? this.__width - this._scrollBar._width : this.__width;
+		return autoScrollBar ? __width - _scrollBar._width : __width;
 	}
 
-	function toString()
+
+	/** @exclude */
+	public function toString(): String
 	{
-		return "[Scaleform ScrollingList " + this._name + "]";
+		return "[Scaleform ScrollingList " + _name + "]";
 	}
 
-	function configUI()
+
+	/* PRIVATE FUNCTIONS */
+
+	private function configUI(): Void
 	{
 		super.configUI();
-		if (this.inspectableScrollBar != "" && this.inspectableScrollBar != null) 
-		{
-			this.scrollBar = this.inspectableScrollBar;
-			this.inspectableScrollBar = null;
+		if (inspectableScrollBar != '' && inspectableScrollBar != null) {
+			scrollBar = inspectableScrollBar;
+			inspectableScrollBar = null;
 		}
 	}
 
-	function draw()
+
+	private function draw(): Void
 	{
-		if (this.sizeIsInvalid) 
-		{
-			this._width = this.__width;
-			this._height = this.__height;
+		if (sizeIsInvalid) {
+			_width = __width;
+			_height = __height;
 		}
-		if (this.externalRenderers) 
-		{
-			this.totalRenderers = this.renderers.length;
-		}
-		else 
-		{
-			this.container._xscale = 10000 / this._xscale;
-			this.container._yscale = 10000 / this._yscale;
-			var __reg3 = this._rowHeight;
-			if (__reg3 == null) 
-			{
-				var __reg4 = this.createItemRenderer(99);
-				__reg4.enableInitCallback = false;
-				__reg3 = __reg4._height;
-				__reg4.removeMovieClip();
+
+		if (externalRenderers) {
+			totalRenderers = renderers.length;
+		} else {
+			container._xscale = 10000 / _xscale; // Counter scale the list items.
+			container._yscale = 10000 / _yscale;
+			var h: Number = _rowHeight;
+			if (h == null) {
+				var temp: MovieClip = createItemRenderer(99);
+                temp.enableInitCallback = false;
+				h = temp._height;
+				temp.removeMovieClip();
 			}
-			var __reg5 = this.margin * 2 + this.paddingTop + this.paddingBottom;
-			this.totalRenderers = Math.max(0, (this.__height - __reg5 + 0.05) / __reg3 >> 0);
-			this.drawRenderers(this.totalRenderers);
-			this.drawLayout(this.availableWidth, __reg3);
+			var vertPadding: Number = (margin * 2) + paddingTop + paddingBottom;
+			totalRenderers = Math.max(0, (__height - vertPadding + 0.05) / h >> 0);
+
+			drawRenderers(totalRenderers);
+			drawLayout(availableWidth, h);
 		}
-		this.updateScrollBar();
-		this.invalidateData();
-		this.setState();
+		updateScrollBar();
+		invalidateData();
+		setState();
+
 		super.draw();
 	}
 
-	function drawLayout(rendererWidth, rendererHeight)
+
+	private function drawLayout(rendererWidth: Number, rendererHeight: Number): Void
 	{
-		var __reg5 = this.paddingLeft + this.paddingRight + this.margin * 2;
-		rendererWidth = rendererWidth - __reg5;
-		var __reg2 = 0;
-		while (__reg2 < this.renderers.length) 
-		{
-			this.renderers[__reg2]._x = this.margin + this.paddingLeft;
-			this.renderers[__reg2]._y = __reg2 * rendererHeight + this.margin + this.paddingTop;
-			this.renderers[__reg2].setSize(rendererWidth, rendererHeight);
-			++__reg2;
+		var horizPadding: Number = paddingLeft + paddingRight + (margin * 2);
+		rendererWidth = rendererWidth - horizPadding;
+		for (var i: Number = 0; i < renderers.length; i++) {
+			renderers[i]._x = margin + paddingLeft;
+			renderers[i]._y = (i * rendererHeight) + margin + paddingTop;
+			renderers[i].setSize(rendererWidth, rendererHeight);
 		}
-		this.drawScrollBar();
+		drawScrollBar();
 	}
 
-	function drawScrollBar()
+
+	private function drawScrollBar(): Void
 	{
-		if (this.autoScrollBar) 
-		{
-			this._scrollBar._x = this.__width - this._scrollBar._width - this.margin;
-			this._scrollBar._y = this.margin;
-			this._scrollBar.height = this.__height - this.margin * 2;
+		if (!autoScrollBar) {
+			return;
 		}
+
+		_scrollBar._x = __width - _scrollBar._width - margin;
+		_scrollBar._y = margin;
+		_scrollBar.height = __height - (margin * 2);
 	}
 
-	function changeFocus()
+
+	private function changeFocus(): Void
 	{
 		super.changeFocus();
-		this.setState();
-		var __reg3 = this.getRendererAt(this._selectedIndex);
-		if (__reg3 != null) 
-		{
-			__reg3.displayFocus = this._focused;
+		setState();
+		var renderer: MovieClip = getRendererAt(_selectedIndex);
+		if (renderer != null) {
+			renderer.displayFocus = _focused;
 		}
 	}
 
-	function populateData(data)
+
+	private function populateData(data: Array): Void
 	{
-		var __reg2 = 0;
-		while (__reg2 < this.renderers.length) 
-		{
-			var __reg4 = this.renderers[__reg2];
-			var __reg3 = this._scrollPosition + __reg2;
-			this.renderers[__reg2].setListData(__reg3, this.itemToLabel(data[__reg2]), this._selectedIndex == __reg3);
-			__reg4.setData(data[__reg2]);
-			++__reg2;
+		for (var i: Number = 0; i < renderers.length; i++) {
+			var renderer: MovieClip = renderers[i];
+			var index: Number = _scrollPosition + i;
+			renderers[i].setListData(index, itemToLabel(data[i]), _selectedIndex == index);
+			renderer.setData(data[i]);
 		}
-		this.updateScrollBar();
+		updateScrollBar();
 	}
 
-	function handleScroll(event)
+
+	// The scrollBar changes
+	private function handleScroll(event: Object): Void
 	{
-		var __reg2 = event.target.position;
-		if (isNaN(__reg2)) 
-		{
-			return undefined;
+		var newPosition: Number = event.target.position;
+		if (isNaN(newPosition)) {
+			return;
 		}
-		this.scrollPosition = __reg2;
+
+		scrollPosition = newPosition;
 	}
 
-	function updateScrollBar()
+
+	// The data/size changes
+	private function updateScrollBar(): Void
 	{
-		var __reg2 = Math.max(0, this.dataProvider.length - this.totalRenderers);
-		if (this._scrollBar.setScrollProperties == null) 
-		{
-			this._scrollBar.minimum = 0;
-			this._scrollBar.maximum = __reg2;
+		var max: Number = Math.max(0, dataProvider.length-totalRenderers);
+		if (_scrollBar.setScrollProperties != null) {
+			_scrollBar.setScrollProperties(totalRenderers*thumbSizeFactor, 0, max);
+		} else {
+			_scrollBar.minimum = 0;
+			_scrollBar.maximum = max;
 		}
-		else 
-		{
-			this._scrollBar.setScrollProperties(this.totalRenderers * this.thumbSizeFactor, 0, __reg2);
-		}
-		this._scrollBar.position = this._scrollPosition;
-		this._scrollBar.trackScrollPageSize = Math.max(1, this.totalRenderers);
+		_scrollBar.position = _scrollPosition;
+		_scrollBar.trackScrollPageSize = Math.max(1, totalRenderers);
 	}
 
-	function getRendererAt(index)
+
+	private function getRendererAt(index: Number): MovieClip
 	{
-		return this.renderers[index - this._scrollPosition];
+		return renderers[index - _scrollPosition];
 	}
 
-	function scrollWheel(delta)
+
+	private function scrollWheel(delta: Number): Void
 	{
-		if (this._disabled) 
-		{
-			return undefined;
+		if (_disabled) {
+			return;
 		}
-		var __reg2 = this._scrollBar != undefined && this._scrollBar.pageScrollSize != undefined ? this._scrollBar.pageScrollSize : 1;
-		this.scrollPosition = this._scrollPosition - delta * __reg2;
+
+		var pageScrollSize = (_scrollBar != undefined && _scrollBar.pageScrollSize != undefined) ? _scrollBar.pageScrollSize : 1;
+		scrollPosition = _scrollPosition - (delta * pageScrollSize);
 	}
 
-	function setState()
+
+	private function setState(): Void
 	{
-		this.tabEnabled = this.focusEnabled = !this._disabled;
-		this.gotoAndPlay(this._disabled ? "disabled" : (this._focused ? "focused" : "default"));
-		if (this._scrollBar) 
-		{
-			this._scrollBar.disabled = this._disabled;
-			this._scrollBar.tabEnabled = false;
+		tabEnabled = focusEnabled = !_disabled;
+		gotoAndPlay(_disabled ? "disabled" : _focused ? "focused" : "default");
+
+		if (_scrollBar) {
+			_scrollBar.disabled = _disabled;
+			_scrollBar.tabEnabled = false;
 		}
-		var __reg2 = 0;
-		for (;;) 
-		{
-			if (__reg2 >= this.renderers.length) 
-			{
-				return;
-			}
-			this.renderers[__reg2].disabled = this._disabled;
-			this.renderers[__reg2].tabEnabled = false;
-			++__reg2;
+
+		for (var i: Number = 0; i < renderers.length; i++) {
+			renderers[i].disabled = _disabled;
+			renderers[i].tabEnabled = false;
 		}
 	}
-
 }

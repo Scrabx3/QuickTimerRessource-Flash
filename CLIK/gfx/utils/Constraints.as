@@ -1,165 +1,211 @@
-dynamic class gfx.utils.Constraints
-{
-	static var LEFT: Number = 1;
-	static var RIGHT: Number = 2;
-	static var TOP: Number = 4;
-	static var BOTTOM: Number = 8;
-	static var ALL = gfx.utils.Constraints.LEFT | gfx.utils.Constraints.RIGHT | gfx.utils.Constraints.TOP | gfx.utils.Constraints.BOTTOM;
-	var scaled: Boolean = false;
-	var elements;
-	var scope;
+/**
+ * The Constraints utility helps symbols scale and align the assets contained within them. Elements can be added to a Constraints instance, and they will be reflowed when the {@code update(width,height)} method is called.
+ *
+ * This utility supports both re-scaling and counter-scaling methods.  Rescaling occurs when the component is scaled back to 100%, and the assets are reflowed and scaled to look correct. Counter-scaling occurs when the component is left at its transformed size, and the assets are scaled inversely to the parent clip.
+ */
 
-	function Constraints(scope, scaled)
+
+class gfx.utils.Constraints
+{
+	/* CONSTANTS */
+	/** A constant ENUM value representing the left edge of the component **/
+	public static var LEFT: Number = 1;
+	/** A constant ENUM value representing the right edge of the component **/
+	public static var RIGHT: Number = 2;
+	/** A constant ENUM value representing the top edge of the component **/
+	public static var TOP: Number = 4;
+	/** A constant ENUM value representing the the bottom edge of the component **/
+	public static var BOTTOM: Number = 8;
+	/** A constant ENUM value representing the the left, right, top, and bottom edges of the component **/
+	public static var ALL: Number = LEFT | RIGHT | TOP | BOTTOM;
+
+
+	/* PUBLIC VARIABLES */
+
+	/** Use a counter-scaling mode instead of a reflowing mode if this property is set to true. **/
+	public var scaled: Boolean = false;
+
+	/** The container component that the constraints are applied to. **/
+	public var scope: Object;
+
+
+	/* PRIVATE VARIABLES */
+
+	private var elements: Array;
+
+
+	/* INITIALIZATION */
+
+	/**
+	 * Create a new Constraints instance to assist in the positioning and scaling of an asset inside a component.
+	 * @param scope The component scope which contains the constrained asset.
+	 * @param scaled Determines if the component is counter-scaled ({@code true}) or not ({@code false}).
+	 */
+	public function Constraints(scope: MovieClip, scaled: Boolean)
 	{
 		this.scope = scope;
 		this.scaled = scaled;
-		this.elements = [];
+		elements = [];
 	}
 
-	function addElement(clip, edges)
+
+	/* PUBLIC FUNCTIONS */
+
+	/**
+	 * Add an element to this constraints instance.
+	 * @param clip The MovieClip to add as a constrained element.
+	 * @param constraints The constraining edges.  A bitwise number which can contain any combination of edge parameters.
+	 */
+	public function addElement(clip: Object, edges: Number): Void
 	{
-		if (clip != null) 
-		{
-			var __reg8 = 100 / this.scope._xscale;
-			var __reg7 = 100 / this.scope._yscale;
-			var __reg6 = this.scope._width;
-			var __reg5 = this.scope._height;
-			if (this.scope == _root) 
-			{
-				__reg6 = Stage.width;
-				__reg5 = Stage.height;
+		if (clip == null) {
+			return;
+		}
+
+		var xAdjust: Number = 100 / scope._xscale;
+		var yAdjust: Number = 100 / scope._yscale;
+
+		// Determine the scope width.  If it is the stage, use the full swf size, otherwise we get 0,0.
+		var w: Number = scope._width;
+		var h: Number = scope._height;
+		if (scope == _root) {
+			w = Stage.width;
+			h = Stage.height;
+		}
+
+		var element: Object = {
+			clip: clip,
+			edges: edges,
+			metrics: {
+				left: clip._x,
+				top: clip._y,
+				right: w * xAdjust - (clip._x + clip._width),
+				bottom: h * yAdjust - (clip._y + clip._height),
+				xscale: clip._xscale,
+				yscale: clip._yscale
 			}
-			var __reg4 = {clip: clip, edges: edges, metrics: {left: clip._x, top: clip._y, right: __reg6 * __reg8 - (clip._x + clip._width), bottom: __reg5 * __reg7 - (clip._y + clip._height), xscale: clip._xscale, yscale: clip._yscale}};
-			var __reg14 = __reg4.metrics;
-			this.elements.push(__reg4);
+		}
+		var m = element.metrics;
+		elements.push(element);
+	}
+
+
+	/**
+	 * Remove an element from this Constraints instance
+	 * @param clip A reference to the MovieClip to remove.
+	 */
+	public function removeElement(clip: MovieClip): Void
+	{
+		for (var i: Number = 0; i < elements.length; i++) {
+			if (elements[i].clip == clip) {
+				elements.splice(i, 1);
+				break;
+			}
 		}
 	}
 
-	function removeElement(clip)
-	{
-		var __reg2 = 0;
-		for (;;) 
-		{
-			if (__reg2 >= this.elements.length) 
-			{
-				return;
-			}
-			if (this.elements[__reg2].clip == clip) 
-			{
-				this.elements.splice(__reg2, 1);
-				return;
-			}
-			++__reg2;
-		}
-	}
 
-	function getElement(clip)
+	/**
+	 * Get the constraints rules for a given object.
+	 * @param clip A reference to the MovieClip the constraints apply to.
+	 * @returns the constraints rules object for the specified clip
+	 */
+	public function getElement(clip: Object): Object
 	{
-		var __reg2 = 0;
-		while (__reg2 < this.elements.length) 
-		{
-			if (this.elements[__reg2].clip == clip) 
-			{
-				return this.elements[__reg2];
+		for (var i: Number = 0; i < elements.length; i++) {
+			if (elements[i].clip == clip) {
+				return elements[i];
 			}
-			++__reg2;
 		}
 		return null;
 	}
 
-	function update(width, height)
+
+	/**
+	 * Change the width/height and x/y of each registered component based on the scope's updated size and the constraint rules.
+	 * @param width The new width of the scope component.
+	 * @param height The new height of the scope component.
+	 */
+	public function update(width: Number, height: Number): Void
 	{
-		var __reg10 = 100 / this.scope._xscale;
-		var __reg9 = 100 / this.scope._yscale;
-		if (!this.scaled) 
-		{
-			this.scope._xscale = 100;
-			this.scope._yscale = 100;
+		// Deterine the scale factor
+		var xAdjust: Number = 100 / scope._xscale;
+		var yAdjust: Number = 100 / scope._yscale;
+
+		// Reset the scale based on the original size for reflowing.
+		if (!scaled) {
+			scope._xscale = 100;
+			scope._yscale = 100;
 		}
-		var __reg8 = 0;
-		for (;;) 
-		{
-			if (__reg8 >= this.elements.length) 
-			{
-				return;
-			}
-			var __reg5 = this.elements[__reg8];
-			var __reg4 = __reg5.edges;
-			var __reg2 = __reg5.clip;
-			var __reg3 = __reg5.metrics;
-			var __reg14 = __reg2.width == null ? "_width" : "width";
-			var __reg13 = __reg2.height == null ? "_height" : "height";
-			if (this.scaled) 
-			{
-				__reg2._xscale = __reg3.xscale * __reg10;
-				__reg2._yscale = __reg3.yscale * __reg9;
-				if ((__reg4 & gfx.utils.Constraints.LEFT) > 0) 
-				{
-					__reg2._x = __reg3.left * __reg10;
-					if ((__reg4 & gfx.utils.Constraints.RIGHT) > 0) 
-					{
-						var __reg7 = width - __reg3.left - __reg3.right;
-						if (!(__reg2 instanceof TextField)) 
-						{
-							__reg7 = __reg7 * __reg10;
+
+		// Loop through elements, and adjust each one
+		for (var i: Number = 0; i < elements.length; i++) {
+			var element: Object = elements[i];
+			var edges: Number = element.edges;
+			var clip: MovieClip = element.clip;
+			var metrics: Object = element.metrics;
+
+			var w: String = clip.width != null ? "width" : "_width";
+			var h: String = clip.height != null ? "height" : "_height";
+
+			// Use counter-scaling method
+			if (scaled) {
+				clip._xscale = metrics.xscale * xAdjust;
+				clip._yscale = metrics.yscale * yAdjust;
+
+				if ((edges & Constraints.LEFT) > 0) {
+					clip._x = metrics.left * xAdjust;
+					if ((edges & Constraints.RIGHT) > 0) {
+						var nw: Number = width - metrics.left - metrics.right;
+						if (!(clip instanceof TextField)) {
+							nw = nw * xAdjust;
 						}
-						__reg2[__reg14] = __reg7;
+						clip[w] = nw;
 					}
+				} else if ((edges & Constraints.RIGHT) > 0) {
+					clip._x = (width - metrics.right) * xAdjust - clip._width;
 				}
-				else if ((__reg4 & gfx.utils.Constraints.RIGHT) > 0) 
-				{
-					__reg2._x = (width - __reg3.right) * __reg10 - __reg2._width;
-				}
-				if ((__reg4 & gfx.utils.Constraints.TOP) > 0) 
-				{
-					__reg2._y = __reg3.top * __reg9;
-					if ((__reg4 & gfx.utils.Constraints.BOTTOM) > 0) 
-					{
-						var __reg6 = height - __reg3.top - __reg3.bottom;
-						if (!(__reg2 instanceof TextField)) 
-						{
-							__reg6 = __reg6 * __reg9;
+
+				if ((edges & Constraints.TOP) > 0) {
+					clip._y = metrics.top * yAdjust;
+					if ((edges & Constraints.BOTTOM) > 0) {
+						var nh: Number = height - metrics.top - metrics.bottom;
+						if (!(clip instanceof TextField)) {
+							nh = nh * yAdjust;
 						}
-						__reg2[__reg13] = __reg6;
+						clip[h] = nh;
 					}
+				} else if ((edges & Constraints.BOTTOM) > 0) {
+					clip._y = (height - metrics.bottom) * yAdjust - clip._height;
 				}
-				else if ((__reg4 & gfx.utils.Constraints.BOTTOM) > 0) 
-				{
-					__reg2._y = (height - __reg3.bottom) * __reg9 - __reg2._height;
-				}
+
 			}
-			else 
-			{
-				if ((__reg4 & gfx.utils.Constraints.RIGHT) > 0) 
-				{
-					if ((__reg4 & gfx.utils.Constraints.LEFT) > 0) 
-					{
-						__reg2[__reg14] = width - __reg3.left - __reg3.right;
-					}
-					else 
-					{
-						__reg2._x = width - __reg2._width - __reg3.right;
+
+			// Use reflowing
+			else {
+				if ((edges & Constraints.RIGHT) > 0) {
+					if ((edges & Constraints.LEFT) > 0) {
+						clip[w] = width - metrics.left - metrics.right; // Stretch
+					} else {
+						clip._x = width - clip._width - metrics.right; // Just move
 					}
 				}
-				if ((__reg4 & gfx.utils.Constraints.BOTTOM) > 0) 
-				{
-					if ((__reg4 & gfx.utils.Constraints.TOP) > 0) 
-					{
-						__reg2[__reg13] = height - __reg3.top - __reg3.bottom;
-					}
-					else 
-					{
-						__reg2._y = height - __reg2._height - __reg3.bottom;
+
+				if ((edges & Constraints.BOTTOM) > 0) {
+					if ((edges & Constraints.TOP) > 0) {
+						clip[h] = height - metrics.top - metrics.bottom;
+					} else {
+						clip._y = height - clip._height - metrics.bottom;
 					}
 				}
 			}
-			++__reg8;
 		}
 	}
 
-	function toString()
+
+	/** @exclude */
+	public function toString(): String
 	{
 		return "[Scaleform Constraints]";
 	}
-
 }

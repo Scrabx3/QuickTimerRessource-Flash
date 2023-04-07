@@ -1,196 +1,198 @@
-dynamic class gfx.managers.InputDelegate extends gfx.events.EventDispatcher
+/**
+ * InputDelegate receives commands from the game, by intercepting keys, controller buttons, etc, and dispatches Input events. InputDetail objects are generated containing a navigation equivalent. FocusHandler will instantiate an InputDelegate when input is required.
+ */
+
+
+import gfx.events.EventDispatcher;
+import gfx.ui.InputDetails;
+import gfx.ui.NavigationCode;
+
+
+class gfx.managers.InputDelegate extends EventDispatcher
 {
-	var dispatchEvent;
-	var keyRepeatStateLookup;
-	var keyRepeatSuppressLookup;
+	/* CONSTANTS */
 
-	function InputDelegate()
+	private static var _instance: InputDelegate;
+
+
+	/* PRIVATE VARIABLES */
+
+	private var keyRepeatSuppressLookup: Object;
+	private var keyRepeatStateLookup: Object;
+
+
+	/* INITIALIZATION */
+
+	/**
+	 * Create a new InputDelegate instance. This method should only be called internally by the InputDelegate class, as the implementation is a Singleton.
+	 */
+	public function InputDelegate()
 	{
-		super();
 		Key.addListener(this);
-		this.keyRepeatSuppressLookup = {};
-		this.keyRepeatStateLookup = {};
+
+		keyRepeatSuppressLookup = { };
+		keyRepeatStateLookup = { };
 	}
 
-	static function get instance()
+
+	/* PUBLIC FUNCTIONS */
+
+	/** Returns the Singleton instance of the InputDelegate */
+	public static function get instance(): InputDelegate
 	{
-		if (gfx.managers.InputDelegate._instance == null) 
-		{
-			gfx.managers.InputDelegate._instance = new gfx.managers.InputDelegate();
+		if (_instance == null) {
+			_instance = new InputDelegate();
 		}
-		return gfx.managers.InputDelegate._instance;
+		return _instance;
 	}
 
-	function setKeyRepeat(code, value, controllerIdx)
+
+	/**
+	 * Enable or disable key repeat for a specific keycode for specified controller. Only applicable if system key repeat is on.
+	 * @param	code The key code for the key.
+	 * @param	value The repeat state.
+	 */
+	public function setKeyRepeat(code: Number, value: Boolean, controllerIdx: Number): Void
 	{
-		var __reg2 = this.getKeyRepeatSuppress(controllerIdx);
-		__reg2[code] = !value;
+		var keyRepeatSuppress: Object = getKeyRepeatSuppress(controllerIdx);
+		keyRepeatSuppress[code] = !value;
 	}
 
-	function readInput(type, code, scope, callBack)
+
+	/**
+	 * Request input from the game engine.
+	 * @param type The type of the required interaction.
+	 * @param code The code of the required input.
+	 * @param scope The scope of the callBack.
+	 * @param callBack The function name of the callBack.
+	 * @return An Object containing relevant information about the requested input.
+	 */
+	public function readInput(type: String, code: Number, scope: Object, callBack: String): Object
 	{
+		// Look up game engine stuff
 		return null;
 	}
 
-	function inputToNav(type, code, value)
+
+	/**
+	 * Convert input to readable navigation commands
+	 * @param type The type of interaction
+	 * @param code The numeric code of the input
+	 * @param value Additional details from the input
+	 * @return The navigation equivalent String.
+	 */
+	public function inputToNav(type: String, code: Number, value): String
 	{
-		if (type == "key") 
-		{
-			if ((__reg0 = code) === 38) 
-			{
-				return gfx.ui.NavigationCode.UP;
+		// Keys, likely the PC Keyboard.
+		if (type == "key") {
+			switch (code) {
+				case Key.UP:
+					return NavigationCode.UP;
+				case Key.DOWN:
+					return NavigationCode.DOWN;
+				case Key.LEFT:
+					return NavigationCode.LEFT;
+				case Key.RIGHT:
+					return NavigationCode.RIGHT;
+				case Key.ENTER:
+				case Key.SPACE:
+					return NavigationCode.ENTER;
+				case Key.BACKSPACE:
+					return NavigationCode.BACK;
+				case Key.TAB:
+					return Key.isDown(Key.SHIFT) ? NavigationCode.SHIFT_TAB : NavigationCode.TAB;
+				case Key.HOME:
+					return NavigationCode.HOME;
+				case Key.END:
+					return NavigationCode.END;
+				case Key.PGDN:
+					return NavigationCode.PAGE_DOWN;
+				case Key.PGUP:
+					return NavigationCode.PAGE_UP;
+				case Key.ESCAPE:
+					return NavigationCode.ESCAPE;
+
+				// Custom handlers for gamepad support
+				case 96:	// NumPad_0
+					return NavigationCode.GAMEPAD_A;
+				case 97:	// NumPad_1
+					return NavigationCode.GAMEPAD_B;
+				case 98:	// NumPad_2
+					return NavigationCode.GAMEPAD_X;
+				case 99:	// NumPad_3
+					return NavigationCode.GAMEPAD_Y;
+				case 100:	// NumPad_4
+					return NavigationCode.GAMEPAD_L1;
+				case 101:	// NumPad_5
+					return NavigationCode.GAMEPAD_L2;
+				case 102:	// NumPad_6
+					return NavigationCode.GAMEPAD_L3;
+				case 103:	// NumPad_7
+					return NavigationCode.GAMEPAD_R1;
+				case 104:	// NumPad_8
+					return NavigationCode.GAMEPAD_R2;
+				case 105:	// NumPad_9
+					return NavigationCode.GAMEPAD_R3;
+				case 106:	// NumPad_Multiply
+					return NavigationCode.GAMEPAD_START;
+				case 107:	// NumPad_Add
+					return NavigationCode.GAMEPAD_BACK;
 			}
-			else if (__reg0 === 40) 
-			{
-				return gfx.ui.NavigationCode.DOWN;
-			}
-			else if (__reg0 === 37) 
-			{
-				return gfx.ui.NavigationCode.LEFT;
-			}
-			else if (__reg0 === 39) 
-			{
-				return gfx.ui.NavigationCode.RIGHT;
-			}
-			else if (__reg0 === 13) 
-			{
-				return gfx.ui.NavigationCode.ENTER;
-			}
-			else if (__reg0 === 32) // Added in 1.8.145.0
-			{
-				return gfx.ui.NavigationCode.ENTER;
-			}
-			else if (__reg0 === 8) 
-			{
-				return gfx.ui.NavigationCode.BACK;
-			}
-			else if (__reg0 === 9) 
-			{
-				return Key.isDown(16) ? gfx.ui.NavigationCode.SHIFT_TAB : gfx.ui.NavigationCode.TAB;
-			}
-			else if (__reg0 === 36) 
-			{
-				return gfx.ui.NavigationCode.HOME;
-			}
-			else if (__reg0 === 35) 
-			{
-				return gfx.ui.NavigationCode.END;
-			}
-			else if (__reg0 === 34) 
-			{
-				return gfx.ui.NavigationCode.PAGE_DOWN;
-			}
-			else if (__reg0 === 33) 
-			{
-				return gfx.ui.NavigationCode.PAGE_UP;
-			}
-			else if (__reg0 === 27) 
-			{
-				return gfx.ui.NavigationCode.ESCAPE;
-			}
-			else if (__reg0 === 96) 
-			{
-				return gfx.ui.NavigationCode.GAMEPAD_A;
-			}
-			else if (__reg0 === 97) 
-			{
-				return gfx.ui.NavigationCode.GAMEPAD_B;
-			}
-			else if (__reg0 === 98) 
-			{
-				return gfx.ui.NavigationCode.GAMEPAD_X;
-			}
-			else if (__reg0 === 99) 
-			{
-				return gfx.ui.NavigationCode.GAMEPAD_Y;
-			}
-			else if (__reg0 === 100) 
-			{
-				return gfx.ui.NavigationCode.GAMEPAD_L1;
-			}
-			else if (__reg0 === 101) 
-			{
-				return gfx.ui.NavigationCode.GAMEPAD_L2;
-			}
-			else if (__reg0 === 102) 
-			{
-				return gfx.ui.NavigationCode.GAMEPAD_L3;
-			}
-			else if (__reg0 === 103) 
-			{
-				return gfx.ui.NavigationCode.GAMEPAD_R1;
-			}
-			else if (__reg0 === 104) 
-			{
-				return gfx.ui.NavigationCode.GAMEPAD_R2;
-			}
-			else if (__reg0 === 105) 
-			{
-				return gfx.ui.NavigationCode.GAMEPAD_R3;
-			}
-			else if (__reg0 === 106) 
-			{
-				return gfx.ui.NavigationCode.GAMEPAD_START;
-			}
-			else if (__reg0 !== 107) 
-			{
-				return;
-			}
-			return gfx.ui.NavigationCode.GAMEPAD_BACK;
 		}
 	}
 
-	function onKeyDown(controllerIdx)
+
+	/* PRIVATE FUNCTIONS */
+
+	private function onKeyDown(controllerIdx: Number): Void
 	{
-		var __reg2 = Key.getCode(controllerIdx);
-		var __reg4 = this.getKeyRepeatState(controllerIdx);
-		if (__reg4[__reg2]) 
-		{
-			var __reg5 = this.getKeyRepeatSuppress(controllerIdx);
-			if (!__reg5[__reg2]) 
-			{
-				this.handleKeyPress("keyHold", __reg2, controllerIdx);
-			}
-			return;
+		var code: Number = Key.getCode(controllerIdx);
+		var keyRepeatState: Object = getKeyRepeatState(controllerIdx);
+		if (keyRepeatState[code]) {
+			var keyRepeatSuppress: Object = getKeyRepeatSuppress(controllerIdx);
+			if (!keyRepeatSuppress[code])
+				handleKeyPress("keyHold", code, controllerIdx);
+		} else {
+			handleKeyPress("keyDown", code, controllerIdx);
+			keyRepeatState[code] = true;
 		}
-		this.handleKeyPress("keyDown", __reg2, controllerIdx);
-		__reg4[__reg2] = true;
 	}
 
-	function onKeyUp(controllerIdx)
+
+	private function onKeyUp(controllerIdx: Number): Void
 	{
-		var __reg2 = Key.getCode(controllerIdx);
-		var __reg4 = this.getKeyRepeatState(controllerIdx);
-		__reg4[__reg2] = false;
-		this.handleKeyPress("keyUp", __reg2, controllerIdx);
+		var code: Number = Key.getCode(controllerIdx);
+		var keyRepeatState: Object = getKeyRepeatState(controllerIdx);
+		keyRepeatState[code] = false;
+		handleKeyPress("keyUp", code, controllerIdx);
 	}
 
-	function handleKeyPress(type, code, controllerIdx)
+
+	private function handleKeyPress(type: String, code: Number, controllerIdx: Number): Void
 	{
-		var __reg3 = new gfx.ui.InputDetails("key", code, type, this.inputToNav("key", code), controllerIdx);
-		this.dispatchEvent({type: "input", details: __reg3});
+		var details: InputDetails = new InputDetails("key", code, type, inputToNav("key", code), controllerIdx);
+		dispatchEvent( { type: "input", details: details } );
 	}
 
-	function getKeyRepeatState(controllerIdx)
+
+	private function getKeyRepeatState(controllerIdx: Number): Object
 	{
-		var __reg2 = this.keyRepeatStateLookup[controllerIdx];
-		if (!__reg2) 
-		{
-			__reg2 = new Object();
-			this.keyRepeatStateLookup[controllerIdx] = __reg2;
+		var hash: Object = keyRepeatStateLookup[controllerIdx];
+		if (!hash) {
+			hash = new Object();
+			keyRepeatStateLookup[controllerIdx] = hash;
 		}
-		return __reg2;
+		return hash;
 	}
 
-	function getKeyRepeatSuppress(controllerIdx)
+
+	private function getKeyRepeatSuppress(controllerIdx: Number): Object
 	{
-		var __reg2 = this.keyRepeatSuppressLookup[controllerIdx];
-		if (!__reg2) 
-		{
-			__reg2 = new Object();
-			this.keyRepeatSuppressLookup[controllerIdx] = __reg2;
+		var hash: Object = keyRepeatSuppressLookup[controllerIdx];
+		if (!hash) {
+			hash = new Object();
+			keyRepeatSuppressLookup[controllerIdx] = hash;
 		}
-		return __reg2;
+		return hash;
 	}
-
 }
