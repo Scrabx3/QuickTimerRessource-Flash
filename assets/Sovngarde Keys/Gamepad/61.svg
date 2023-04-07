@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   height="26.0px"
+   width="26.0px"
+   version="1.1"
+   id="svg10050"
+   sodipodi:docname="61.svg"
+   inkscape:version="1.1 (c68e22c387, 2021-05-23)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <defs
+     id="defs10054">
+    <rect
+       x="-544.48218"
+       y="30.782032"
+       width="759.15686"
+       height="192.28777"
+       id="rect80405" />
+  </defs>
+  <sodipodi:namedview
+     id="namedview10052"
+     pagecolor="#505050"
+     bordercolor="#eeeeee"
+     borderopacity="1"
+     inkscape:pageshadow="0"
+     inkscape:pageopacity="0"
+     inkscape:pagecheckerboard="0"
+     showgrid="false"
+     inkscape:zoom="22.627417"
+     inkscape:cx="15.600543"
+     inkscape:cy="17.633475"
+     inkscape:window-width="3840"
+     inkscape:window-height="2067"
+     inkscape:window-x="-12"
+     inkscape:window-y="40"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="g10048" />
+  <g
+     transform="matrix(1.0868056,0,0,1.0868056,-1.1284722,-1.1284722)"
+     id="g10048">
+    <path
+       d="m 17.45711,17.998131 -3.143168,-5.101185 3.091629,-4.9723696 c 0.644096,-1.107832 1.262422,-1.236651 1.262422,-1.236651 v -0.79867 h -3.735725 v 0.79867 c 0.669865,0.20612 0.334897,1.185123 0.334897,1.185123 L 13.180298,10.99044 H 12.871135 L 10.887346,8.0276304 c -0.644096,-1.082071 0.283428,-1.365468 0.283428,-1.365468 V 5.8892554 H 7.3577759 v 0.772907 c 0.747138,0.437979 1.674627,2.08685 1.674627,2.08685 l 2.9112781,4.1736956 -3.5296041,5.126951 c -0.644095,1.107833 -1.262421,1.236652 -1.262421,1.236652 v 0.798669 h 4.1736991 v -0.772907 c -0.669829,-0.231855 -0.334897,-1.210889 -0.334897,-1.210889 l 2.189875,-3.55537 h 0.05147 l 1.623123,2.885519 c 0.747138,1.313943 -0.05147,1.88074 -0.05147,1.88074 v 0.79867 h 4.044887 v -0.79867 C 18.101171,18.874091 17.45711,17.998131 17.45711,17.998131 Z"
+       style="font-size:7.40833px;line-height:1.25;font-family:Sovngarde;-inkscape-font-specification:Sovngarde;letter-spacing:3.57188px;fill:#f1edf8;stroke-width:0.920127"
+       id="path167361" />
+  </g>
+</svg>
