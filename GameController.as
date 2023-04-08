@@ -183,10 +183,10 @@ class GameController extends MovieClip
 		TweenLite.to(this, 0.5, {_alpha: 0, ease: Strong.easeOut, onComplete: closeMenu, onCompleteParams: [victory]});
 	}
 
-	private function closeMenu()
+	private function closeMenu(victory)
 	{
 		skse.CloseMenu("AcheronCustomMenu");
-		skse.SendModEvent("AEL_GameEnd", "", 0.0);
+		skse.SendModEvent("AEL_GameEnd", "", victory ? 1.0 : 0.0);
 	}
 
 }
