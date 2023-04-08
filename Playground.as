@@ -23,6 +23,7 @@ class Playground extends MovieClip
 	public var widgetSize: Number;
 
 	/* Variables */
+	private var _useGamepad: Boolean;
 	private var _ready: Boolean;
 	private var _eventCount: Number;
 	private var _activeClips: Array;
@@ -38,8 +39,9 @@ class Playground extends MovieClip
 	private var _reacttime: Number;
 
 	/* API */
-	public function setup(a_difficulty: Number)
+	public function setup(a_difficulty: Number, a_gamepad: Boolean)
 	{
+		_useGamepad = a_gamepad;
 		_difficulty = a_difficulty;
 		_reacttime = 0.012 * (a_difficulty + 1);
 	}
@@ -205,9 +207,8 @@ class Playground extends MovieClip
 		event.removeMovieClip()
 	}
 
-	// TODO: implement this.. somehow. dll callback?
 	public function usesGamepad(): Boolean
 	{
-		return false;
+		return _useGamepad;
 	}
 }

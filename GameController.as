@@ -35,13 +35,13 @@ class GameController extends MovieClip
 	}
 
 	/* API */
-	public function beginGame(a_difficulty: Number): Void
+	public function beginGame(a_difficulty: Number, a_gamepad: Boolean): Void
 	{
 		_difficulty = a_difficulty;
 		_gameActive = true;
 		_requiredEvents = 7 + Math.floor(a_difficulty / 15)
 
-		playground.setup(a_difficulty);
+		playground.setup(a_difficulty, a_gamepad);
 		makeTimeout();
 	}
 
