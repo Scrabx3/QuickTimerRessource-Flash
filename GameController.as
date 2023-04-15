@@ -121,23 +121,22 @@ class GameController extends MovieClip
 	/* GFX */
 	public function handleInput(details: InputDetails, pathToFocus: Array): Boolean
 	{
-		if (GlobalFunc.IsKeyPressed(details)) {
-			switch (details.navEquivalent) {
-			case NavigationCode.ESCAPE:
-			case NavigationCode.TAB:
-			case NavigationCode.BACK:
-			case NavigationCode.END:
-				cancelGame(false);
-				return true;
-			default:
-				if (playground.handleInput(details, pathToFocus)) {
-					return true;
-				}
-			}
-		}
+		if (!_gameActive)
+			return false;
+
+		if (playground.handleInput(details, pathToFocus))
+			return true;
 
 		var nextClip = pathToFocus.shift();
-		return nextClip.handleInput(details, pathToFocus);
+		if (nextClip.handleInput(details, pathToFocus))
+			return true;
+
+		if (GlobalFunc.IsKeyPressed(details) && (details.navEquivalent == NavigationCode.TAB || details.navEquivalent == NavigationCode.SHIFT_TAB)) {
+			cancelGame(false)
+			return true;
+		}
+
+		return false;
 	}
 
 	/* PRIVATE */
