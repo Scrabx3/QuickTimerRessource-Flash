@@ -13,6 +13,13 @@
       279
     ]
   },
+  "Multipliers": {
+    "Damage": 1.0,
+    "Regeneration": 1.0,
+    "Delay": 1.0,
+    "Time": 1.0,
+    "Events": 0
+  },
   "Coordinates": {
     "SpanX": 0.10,
     "SpanY": 0.15

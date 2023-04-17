@@ -10,7 +10,6 @@ class ProgressBar extends MovieClip
 	private var MeterTimeline:TimelineLite;
 	private var _1pct:Number;
 
-
 	/* INIT */
 	public function ProgressBar()
 	{
@@ -19,7 +18,7 @@ class ProgressBar extends MovieClip
 		MeterTimeline = new TimelineLite({paused:true});
 	}
 
-	public function onLoad()
+	public function setPosition()
 	{
 		this._width = Stage.visibleRect.width + 2;
 		this._y = (Stage.visibleRect.y + Stage.visibleRect.height) - this._height + 2;
@@ -29,6 +28,7 @@ class ProgressBar extends MovieClip
 		// trace("ProgessBar: Y = " + this._y + " | X = " + this._x + " | Width = " + this._width + " | Height = " + this._height);
 	}
 
+	/* API */
 	public function forceMeterPercent(a_targetpct:Number):Void
 	{
 		MeterTimeline.clear();

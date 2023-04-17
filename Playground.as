@@ -1,5 +1,4 @@
-﻿
-import gfx.events.EventDispatcher;
+﻿import gfx.events.EventDispatcher;
 import gfx.io.GameDelegate;
 import gfx.utils.Delegate;
 import gfx.ui.NavigationCode;
@@ -11,55 +10,37 @@ import com.greensock.easing.*;
 
 class Playground extends MovieClip
 {
-	public static var CONFIG_PATH: String = "AcheronQTE.json";
-
 	/* STAGE */
 	public var background: MovieClip;
 
 	/* Properties */
-	public var widget: String;					// MovieClip object to place
-	public var widgetOffsetX: Number;		// Height (incl offset) of widget
-	public var widgetOffsetY: Number;		// Width ...
+	public var widget: String;	// MovieClip object to place
 	public var widgetSize: Number;
 
 	/* Variables */
-	private var _useGamepad: Boolean;
-	private var _ready: Boolean;
+	public var dispatchEvent: Function;
+
 	private var _eventCount: Number;
 	private var _activeClips: Array;
-	
-	public var dispatchEvent: Function;
-	public var addEventListener: Function;
 
 	/* GAME RELATED */
-	private var _keyboardKeys: Array;
-	private var _gamepadKeys: Array;
-
-	private var _difficulty: Number;
+	private var _eventKeys: Array;
 	private var _reacttime: Number;
 
 	/* API */
-	public function setup(a_difficulty: Number, a_gamepad: Boolean)
+	public function setup(a_difficulty: Number, a_reactmult: Number, a_eventKeys: Array)
 	{
-		_useGamepad = a_gamepad;
-		_difficulty = a_difficulty;
-		_reacttime = 0.012 * (a_difficulty + 1);
+		_eventKeys = a_eventKeys;
+		_reacttime = (0.012 * (a_difficulty + 1)) * a_reactmult;
 	}
 
 	public function create(name: String)
 	{
-		if (!_ready) {
-			setTimeout(Delegate.create(this, create), 10);
-			return;
-		}
-
 		var nextEvent = _parent.attachMovie(widget, widget + _eventCount++, _parent.getNextHighestDepth());
 		// size
 		nextEvent._height = nextEvent._width = widgetSize * (Math.random() + 0.5);
 		// position
-		var isOverlapping = function (coordinates): Boolean {
-
-			
+		var isOverlapping = function (coordinates): Boolean {			
 			var valueInRange = function(value: Number, min: Number, max: Number): Boolean {
 				return (value >= min) && (value <= max);
 			}
@@ -97,10 +78,9 @@ class Playground extends MovieClip
 		// time
 		var time = Math.max(_reacttime * (Math.random() * 0.8 + 0.7), 0.1);
 		// key
-		var key = usesGamepad() ?
-			_gamepadKeys[Math.floor(Math.random() * _gamepadKeys.length)] :
-			_keyboardKeys[Math.floor(Math.random() * _keyboardKeys.length)]
+		var key = _eventKeys[Math.floor(Math.random() * _eventKeys.length)]
 		nextEvent.targetKey = key;
+		nextEvent.targetKeyCode = getScaleformCode(key);
 		// send
 		nextEvent.initialize(key, time, Delegate.create(this, endEvent));
 
@@ -127,61 +107,43 @@ class Playground extends MovieClip
 
 		_activeClips = [];
 		_eventCount = 0;
-		_ready = false;
 		setup(70);
-		
-		var lv = new LoadVars();
-		lv.onData = function(src: String) {
-			var me = this["_this"];
-			try {
-				// Position Object
-				var maxXY:Object = {x:Stage.visibleRect.x + Stage.visibleRect.width - Stage.safeRect.x, y:Stage.visibleRect.y + Stage.visibleRect.height - Stage.safeRect.y};
-				var clamp = function(x) {
-					return Math.min(0.50, Math.max(x, 0.05));
-				}
+	}
 
-				var o: Object = JSON.parse(src);
-				var coords = o.Coordinates;
-				var ratioX = clamp(coords.SpanX ? coords.SpanX : 0.10, 0.05);
-				var ratioY = clamp(coords.SpanY ? coords.SpanY : 0.15, 0.05);
-				
-				var offset = {
-					x: maxXY.x * ratioX,
-					y: maxXY.y * ratioY
-				}
-				me._parent.globalToLocal(offset);
-				me._x = offset.x;
-				me._y = offset.y;
-				me._width = Stage.visibleRect.width - 2 * offset.x;
-				me._height = Stage.visibleRect.height - 2 * offset.y;
-				// trace("_x: " + me._x + " / _y: " + me._y + " / _width: " + me._width + " / _height: " + me._height);
-
-				// Key Codes
-				var controls = o.Controls;
-				me._keyboardKeys = controls && controls.Keyboard ? controls.Keyboard : [17, 30, 31, 32];
-				me._gamepadKeys = controls && controls.Gamepad ? controls.Gamepad : [276, 177, 278, 279];
-			} catch(ex) {
-				trace(ex.name + ":" + ex.message + ":" + ex.at + ":" + ex.text);
-			}
-
-			me._ready = true;
-		};
-		lv._this = this;
-		lv.load(CONFIG_PATH);
+	public function setPlaygroundSize(offset)
+	{
+		// trace("Setting playground with offset: " + offset.x + " / " + offset.y);
+		_parent.globalToLocal(offset);
+		_x = offset.x;
+		_y = offset.y;
+		_width = Stage.visibleRect.width - 2 * offset.x;
+		_height = Stage.visibleRect.height - 2 * offset.y;
+		// trace("_x: " + _x + " / _y: " + _y + " / _width: " + _width + " / _height: " + _height);
 	}
 
 	/* GFX */
 	public function handleInput(details: InputDetails, pathToFocus: Array): Boolean
 	{
-		endEvent(_activeClips[0], _activeClips[0].targetKey == details.code);
+		if (details.value != "keyDown")
+			return false;
 
+		var codes = _activeClips[0].targetKeyCode;
+		var victory = false;
+		for (var i = 0; i < codes.length; i++) {
+			if (codes[i] == details.code) {
+				victory = true;
+				break;
+			}
+		}
+
+		endEvent(_activeClips[0], victory);
 		return true;
 	}
 
 	/* PRIVATE */
 	public function endEvent(event, victory: Boolean)
 	{
-		trace("endEvent; victory = " + victory);
+		// trace("endEvent; victory = " + victory);
 		for (var i = 0; i < _activeClips.length; i++) {
 			if (_activeClips[i] != event)
 				continue;
@@ -207,8 +169,154 @@ class Playground extends MovieClip
 		event.removeMovieClip()
 	}
 
-	public function usesGamepad(): Boolean
+	private function getScaleformCode(key): Array
 	{
-		return _useGamepad;
+		var code = [];
+		switch(key) {
+			case 2: 	//	1
+				code = [49];
+				break;
+			case 3: 	//	2
+				code = [50];
+				break;
+			case 4: 	//	3
+				code = [51];
+				break;
+			case 5: 	//	4
+				code = [52];
+				break;
+			case 6: 	//	5
+				code = [53];
+				break;
+			case 7: 	//	6
+				code = [54];
+				break;
+			case 8: 	//	7
+				code = [55];
+				break;
+			case 9: 	//	8
+				code = [56];
+				break;
+			case 10:	//	9
+				code = [57];
+				break;
+			case 11:  //	0
+				code = [48];
+				break;
+			case 16: 	//	Q
+				code = [81];
+				break;
+			case 19: 	//	R
+				code = [82];
+				break;
+			case 20: 	//	T
+				code = [84];
+				break;
+			case 21: 	//	Y
+				code = [89];
+				break;
+			case 22: 	//	U
+				code = [85];
+				break;
+			case 23: 	//	I
+				code = [73];
+				break;
+			case 24: 	//	O
+				code = [79];
+				break;
+			case 25: 	//	P
+				code = [80];
+				break;
+			case 33: 	//	F
+				code = [70];
+				break;
+			case 34: 	//	G
+				code = [71];
+				break;
+			case 35: 	//	H
+				code = [72];
+				break;
+			case 36: 	//	J
+				code = [74];
+				break;
+			case 37: 	//	K
+				code = [75];
+				break;
+			case 38: 	//	L
+				code = [76];
+				break;
+			case 44: 	//	Z
+				code = [90];
+				break;
+			case 45: 	//	X
+				code = [88];
+				break;
+			case 46: 	//	C
+				code = [67];
+				break;
+			case 47: 	//	V
+				code = [86];
+				break;
+			case 48: 	//	B
+				code = [66];
+				break;
+			case 49: 	//	N
+				code = [78];
+				break;
+			case 50: 	//	M
+				code = [77];
+				break;
+			// Misc
+			case 200:	//	Up Arrow
+				code = [38];
+				break;
+			case 205:	//	Right Arrow
+				code = [39];
+				break;
+			case 203:	//	Left Arrow
+				code = [37];
+				break;
+			case 208:	//	Down Arrow
+				code = [40];
+				break;
+			// Special Cases
+			case 18: 	//	E (Accept)
+				code = [13, 69];
+				break;
+			case 17: 	//	W (Up)
+				code = [38, 87];
+				break;
+			case 32: 	//	D (Right)
+				code = [39, 68];
+				break;
+			case 30: 	//	A (Left)
+				code = [37, 65];
+				break;
+			case 31: 	//	S (Down)
+				code = [40, 83];
+				break;
+
+			// TODO: gamepad
+			case 266:	//	DPAD_UP
+			case 267:	//	DPAD_DOWN
+			case 268:	//	DPAD_LEFT
+			case 269:	//	DPAD_RIGHT
+			case 272:	//	LEFT_THUMB
+			case 273:	//	RIGHT_THUMB
+			case 274:	//	LEFT_SHOULDER
+			case 275:	//	RIGHT_SHOULDER
+			case 276:	//	A
+			case 277:	//	B
+			case 278:	//	X
+			case 279:	//	Y
+			case 280:	//	LT
+			case 281:	//	RT
+
+			default:
+				trace("Invalid SKSE code: " + key);
+				return [];
+		}
+		// trace("Translating SKSE Code: " + key + " to [" + code + "]");
+		return code;
 	}
 }

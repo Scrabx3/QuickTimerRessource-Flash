@@ -1,4 +1,5 @@
-﻿import gfx.io.GameDelegate;
+﻿import gfx.managers.FocusHandler;
+import gfx.io.GameDelegate;
 import gfx.utils.Delegate;
 import gfx.ui.NavigationCode;
 import gfx.ui.InputDetails;
@@ -6,26 +7,39 @@ import Shared.GlobalFunc;
 
 import com.greensock.*;
 import com.greensock.easing.*;
-
-import progressbar;
-import Playground;
 import JSON;
 
 class GameController extends MovieClip
 {
+	public static var CONFIG_PATH: String = "AcheronEL_QTE.json";
+
+	/* SKSE */
+	public var sendModEvent: Function;
+	public var closeMenu: Function;
+
 	/* STAGE */
-	public var background: MovieClip;
-	public var playground: Playground;
-	public var progressbar: ProgressBar;
+	public var bg: MovieClip;
+	public var playground: MovieClip;
+	public var progressbar: MovieClip;
 
 	/* VARS */
+	private var _ready: Boolean;
 	private var _dummyMC: MovieClip;
 
 	/* GAME VARS */
-	private var _difficulty: Number;
 	private var _gameActive: Boolean;
-	private var _requiredEvents: Number;
+	private var _difficulty: Number;
 
+	private var _requiredEvents: Number;
+	private var _eventCountAdd: Number;
+	private var _reactMult: Number;
+	private var _delayMult: Number;
+
+	private var _keyboardKeys: Array;
+	private var _gamepadKeys: Array;
+
+	private var _damageMult: Number;
+	private var _regenMult: Number;
 	private var _health: Number;
 	public function set health(a_newhealth: Number)
 	{
@@ -40,111 +54,118 @@ class GameController extends MovieClip
 	/* API */
 	public function beginGame(a_difficulty: Number, a_gamepad: Boolean): Void
 	{
-		trace("begin game with difficulty: " + a_difficulty + " | gamepad? " + a_gamepad)
+		trace("begin acheron qte game with difficulty: " + a_difficulty + " | gamepad? " + a_gamepad)
 		_difficulty = a_difficulty;
 		_gameActive = true;
-		_requiredEvents = 7 + Math.floor(a_difficulty / 15)
+		_requiredEvents = Math.max(7 + Math.floor(a_difficulty / 15) + _eventCountAdd, 3);
 
-		playground.setup(a_difficulty, a_gamepad);
+		var keys = a_gamepad ? _gamepadKeys : _keyboardKeys;
+		playground.setup(a_difficulty, _reactMult, keys);
 		makeTimeout();
 	}
 
 	/* INIT */
 	public function GameController()
 	{
-		_global.gfxExtensions = true;
+		super();
+
 		_dummyMC = this.createEmptyMovieClip("dummyMC", this.getNextHighestDepth());
 		_dummyMC._alpha = 100;
+		
+		FocusHandler.instance.setFocus(this, 0);
 
-		_health = 100.0;
+		var lv = new LoadVars();
+		lv.onData = function(src: String) {
+			var me = this["_this"];
+			try {
+				// Position Object
+				var maxXY:Object = {x:Stage.visibleRect.x + Stage.visibleRect.width - Stage.safeRect.x, y:Stage.visibleRect.y + Stage.visibleRect.height - Stage.safeRect.y};
+				var clamp = function(x, min, max) {
+					return Math.min(max, Math.max(x, min));
+				}
+
+				var o: Object = JSON.parse(src);
+				var coords = o.Coordinates;
+				var ratioX = clamp(coords.SpanX ? coords.SpanX : 0.10, 0.05, 0.45);
+				var ratioY = clamp(coords.SpanY ? coords.SpanY : 0.15, 0.05, 0.45);
+				var offset = {
+					x: maxXY.x * ratioX,
+					y: maxXY.y * ratioY
+				}
+				me.playground.setPlaygroundSize(offset);
+
+				// Settings
+				var settings = o.Multipliers;
+				me._damageMult = Math.max(settings.Damage != undefined ? settings.Damage : 0.10, 0.00);
+				me._regenMult =	Math.max(settings.Regeneration != undefined ? settings.Regeneration : 0.10, 0.00);
+				me._delayMult = clamp(settings.Delay != undefined ? settings.Delay : 0.10, 0.5, 2.0);
+				me._reactMult =	clamp(settings.Time != undefined ? settings.Time : 0.10, 0.5, 5);
+				me._eventCountAdd =	settings.Events != undefined ? settings.Events : 0;
+
+				// Key Codes
+				var controls = o.Controls;
+				me._keyboardKeys = controls && controls.Keyboard ? controls.Keyboard : [17, 30, 31, 32];
+				me._gamepadKeys = controls && controls.Gamepad ? controls.Gamepad : [276, 177, 278, 279];
+			} catch(ex) {
+				trace(ex.name + ":" + ex.message + ":" + ex.at + ":" + ex.text);
+			}
+
+			me._ready = true;
+		};
+		lv._this = this;
+		lv.load(CONFIG_PATH);
 	}
 
 	public function onLoad():Void
 	{
-		var minXY:Object = {x:Stage.visibleRect.x + Stage.safeRect.x, y:Stage.visibleRect.y + Stage.safeRect.y};
-		this.globalToLocal(minXY);
-
-		background._width = Stage.visibleRect.width;
-		background._height = Stage.visibleRect.height;
-		background._x = minXY.x;
-		background._y = minXY.y;
-
-		// trace("x = " + background._y + " / y = " + background._x + " / width = " + background._width + " / height = " + background._height);
+		_global.gfxExtensions = true;
+		progressbar.setPosition();
+		health = 100;
 
 		playground.addEventListener("qteResult", this, "onqteResult");
 
-		// setTimeout(Delegate.create(this, testGame), 5000)
+		setTimeout(Delegate.create(this, testGame), 5000)
 	}
 
 	private function testGame()
 	{
-		this.onKeyDown = function() {
-			var key = Key.getCode();
-			// type: String, code: Number, value, navEquivalent: String, controllerIdx: Number
-			switch (key) {
-			case 65:
-				{
-					var details = new InputDetails("key", 30, "keyDown", NavigationCode.UP, 0);
-					handleInput(details);
-				}
-				break;
-			case 83:
-				{
-					var details = new InputDetails("key", 31, "keyDown", NavigationCode.DOWN, 0);
-					handleInput(details);
-				}
-				break;
-			case 68:
-				{
-					var details = new InputDetails("key", 32, "keyDown", NavigationCode.LEFT, 0);
-					handleInput(details);
-				}
-				break;
-			case 87:
-				{
-					var details = new InputDetails("key", 17, "keyDown", NavigationCode.RIGHT, 0);
-					handleInput(details);
-				}
-				break;
-			case Key.TAB:
-				{
-					var details = new InputDetails("key", key, "keyDown", NavigationCode.TAB, 0);
-					handleInput(details);
-				}
-				break;
-			}
-		}
-		Key.addListener(this);
-		beginGame(56);
+		beginGame(100);
 	}
 
 	/* GFX */
 	public function handleInput(details: InputDetails, pathToFocus: Array): Boolean
 	{
+		if (details.value != "keyDown") {
+			var nextClip = pathToFocus.shift();
+			if (nextClip.handleInput(details, pathToFocus))
+				return true;
+
+			return false;
+		}
+		trace(details.toString());
 		if (!_gameActive)
 			return false;
-
-		if (playground.handleInput(details, pathToFocus))
-			return true;
-
-		var nextClip = pathToFocus.shift();
-		if (nextClip.handleInput(details, pathToFocus))
-			return true;
 
 		if (GlobalFunc.IsKeyPressed(details) && (details.navEquivalent == NavigationCode.TAB || details.navEquivalent == NavigationCode.SHIFT_TAB)) {
 			cancelGame(false)
 			return true;
 		}
 
-		return false;
+		return playground.handleInput(details, pathToFocus);
 	}
 
 	/* PRIVATE */
 	private function makeTimeout()
 	{
-		var delay = (Math.pow(16, Math.random() - 1.3) + 0.5);
+		if (!_ready) {
+			setTimeout(Delegate.create(this, makeTimeout), 10);
+			return;
+		}
+
+		var delay = (Math.pow(16, Math.random() - 1.3) + 0.5) * _delayMult;
 		TweenLite.to(_dummyMC, delay, {_alpha: 0, onComplete: makeTimeoutFinish, onCompleteParams: [this]});
 		// setTimeout(Delegate.create(this, createEvent), delay * 1000);
+		// loopID = setInterval(this, "createEvent", delay * 1000)
 	}
 	public function makeTimeoutFinish(mc: MovieClip)
 	{
@@ -168,8 +189,8 @@ class GameController extends MovieClip
 			return;
 
 		var changeHealth = evt.victory ? 
-			Math.pow(_difficulty, 2) * 0.002 :
-			-(Math.pow(0.99, _difficulty) * 100 - 5);
+			(Math.pow(_difficulty, 2) * 0.002) * _regenMult :
+			-((Math.pow(0.99, _difficulty) * 100 - 5) * _damageMult);
 
 		// trace("changeHealth = " + changeHealth + " // health = " + health);
 		health += changeHealth;
@@ -195,7 +216,7 @@ class GameController extends MovieClip
 
 	public function gameEnd(victory: Boolean)
 	{
-		trace("Close Menu; victory: " + victory);
+		// trace("Close Menu; victory: " + victory);
 		skse.SendModEvent("AEL_GameEnd", "", victory ? 1.0 : 0.0, 0);
 		skse.CloseMenu("AcheronCustomMenu");
 	}
