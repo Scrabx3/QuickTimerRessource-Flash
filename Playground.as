@@ -38,7 +38,7 @@ class Playground extends MovieClip
 	{
 		var nextEvent = _parent.attachMovie(widget, widget + _eventCount++, _parent.getNextHighestDepth());
 		// size
-		nextEvent._height = nextEvent._width = widgetSize * (Math.random() + 0.5);
+		nextEvent._height = nextEvent._width = widgetSize * (Math.random() * 0.5 + 0.7);
 		// position
 		var isOverlapping = function (coordinates): Boolean {			
 			var valueInRange = function(value: Number, min: Number, max: Number): Boolean {
@@ -76,7 +76,7 @@ class Playground extends MovieClip
 		nextEvent._x = coords.x;
 		nextEvent._y = coords.y;
 		// time
-		var time = Math.max(_reacttime * (Math.random() * 0.8 + 0.7), 0.1);
+		var time = Math.max(_reacttime * (Math.random() * 0.7 + 0.8), 0.1);
 		// key
 		var key = _eventKeys[Math.floor(Math.random() * _eventKeys.length)]
 		nextEvent.targetKey = key;
@@ -267,19 +267,24 @@ class Playground extends MovieClip
 				code = [77];
 				break;
 			// Misc
+			case 266:	//	DPAD_UP
 			case 200:	//	Up Arrow
 				code = [38];
 				break;
+			case 269:	//	DPAD_RIGHT
 			case 205:	//	Right Arrow
 				code = [39];
 				break;
+			case 268:	//	DPAD_LEFT
 			case 203:	//	Left Arrow
 				code = [37];
 				break;
+			case 267:	//	DPAD_DOWN
 			case 208:	//	Down Arrow
 				code = [40];
 				break;
 			// Special Cases
+			case 276:	//	A (Controller)
 			case 18: 	//	E (Accept)
 				code = [13, 69];
 				break;
@@ -295,23 +300,32 @@ class Playground extends MovieClip
 			case 31: 	//	S (Down)
 				code = [40, 83];
 				break;
-
-			// TODO: gamepad
-			case 266:	//	DPAD_UP
-			case 267:	//	DPAD_DOWN
-			case 268:	//	DPAD_LEFT
-			case 269:	//	DPAD_RIGHT
+			// GamePad (Misc)
 			case 272:	//	LEFT_THUMB
+				code = [102];
+				break;
 			case 273:	//	RIGHT_THUMB
+				code = [105];
+				break;
 			case 274:	//	LEFT_SHOULDER
+				code = [100]
+				break;
 			case 275:	//	RIGHT_SHOULDER
-			case 276:	//	A
-			case 277:	//	B
-			case 278:	//	X
-			case 279:	//	Y
+				code = [103]
+				break;
+			case 278:	//	X (Controller)
+				code = [98]
+				break;
+			case 279:	//	Y (Controller)
+				code = [99];
+				break;
 			case 280:	//	LT
+				code = [101];
+				break;
 			case 281:	//	RT
-
+				code = [104]
+				break;
+			case 277:	//	B (Controller) -- Cancel
 			default:
 				trace("Invalid SKSE code: " + key);
 				return [];

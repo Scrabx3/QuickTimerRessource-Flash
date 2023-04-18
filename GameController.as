@@ -124,7 +124,7 @@ class GameController extends MovieClip
 
 		playground.addEventListener("qteResult", this, "onqteResult");
 
-		setTimeout(Delegate.create(this, testGame), 5000)
+		// setTimeout(Delegate.create(this, testGame), 5000)
 	}
 
 	private function testGame()
@@ -142,7 +142,7 @@ class GameController extends MovieClip
 
 			return false;
 		}
-		trace(details.toString());
+		// trace(details.toString());
 		if (!_gameActive)
 			return false;
 
@@ -216,7 +216,7 @@ class GameController extends MovieClip
 
 	public function gameEnd(victory: Boolean)
 	{
-		// trace("Close Menu; victory: " + victory);
+		trace("AcheronEL QTE: Close Menu; victory: " + victory);
 		skse.SendModEvent("AEL_GameEnd", "", victory ? 1.0 : 0.0, 0);
 		skse.CloseMenu("AcheronCustomMenu");
 	}
