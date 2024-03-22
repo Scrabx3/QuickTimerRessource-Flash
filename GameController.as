@@ -11,7 +11,7 @@ import JSON;
 
 class GameController extends MovieClip
 {
-	public static var CONFIG_PATH: String = "AcheronEL_QTE.json";
+	public static var CONFIG_PATH: String = "QTR_Settings.json";
 
 	/* SKSE */
 	public var sendModEvent: Function;
@@ -54,7 +54,7 @@ class GameController extends MovieClip
 	/* API */
 	public function beginGame(a_difficulty: Number, a_gamepad: Boolean): Void
 	{
-		trace("begin acheron qte game with difficulty: " + a_difficulty + " | gamepad? " + a_gamepad)
+		trace("qtr game start with difficulty: " + a_difficulty + " | gamepad? " + a_gamepad)
 		_difficulty = a_difficulty;
 		_gameActive = true;
 		_requiredEvents = Math.max(7 + Math.floor(a_difficulty / 15) + _eventCountAdd, 3);
@@ -215,9 +215,8 @@ class GameController extends MovieClip
 
 	public function gameEnd(victory: Boolean)
 	{
-		trace("AcheronEL QTE: Close Menu; victory: " + victory);
+		trace("QTR: Close Menu; victory: " + victory);
 		skse.SendModEvent("AEL_GameEnd", "", victory ? 1.0 : 0.0, 0);
-		skse.CloseMenu("AcheronCustomMenu");
 	}
 
 }
