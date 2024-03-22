@@ -31,7 +31,7 @@ class Playground extends MovieClip
 	public function setup(a_difficulty: Number, a_reactmult: Number, a_eventKeys: Array)
 	{
 		_eventKeys = a_eventKeys;
-		_reacttime = (0.012 * (a_difficulty + 1)) * a_reactmult;
+		_reacttime = (0.019 * (a_difficulty + 1)) * a_reactmult;
 	}
 
 	public function create(name: String)
@@ -160,7 +160,7 @@ class Playground extends MovieClip
 				c.setRGB(0x00D241);
 			}
 			TweenLite.to(event, 0.4, { _alpha: 0, onComplete: onEventFadedOut, onCompleteParams: [event], ease: Linear.ease });
-			break;
+			// break;
 		}
 	}
 
