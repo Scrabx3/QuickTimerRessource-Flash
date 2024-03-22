@@ -105,7 +105,7 @@ class GameController extends MovieClip
 				// Key Codes
 				var controls = o.Controls;
 				me._keyboardKeys = controls && controls.Keyboard ? controls.Keyboard : [17, 30, 31, 32];
-				me._gamepadKeys = controls && controls.Gamepad ? controls.Gamepad : [276, 177, 278, 279];
+				me._gamepadKeys = controls && controls.Gamepad ? controls.Gamepad : [276, 277, 278, 279];
 			} catch(ex) {
 				trace(ex.name + ":" + ex.message + ":" + ex.at + ":" + ex.text);
 			}
@@ -129,7 +129,7 @@ class GameController extends MovieClip
 
 	private function testGame()
 	{
-		beginGame(100);
+		beginGame(50);
 	}
 
 	/* GFX */
@@ -162,10 +162,9 @@ class GameController extends MovieClip
 			return;
 		}
 
-		var delay = (Math.pow(16, Math.random() - 1.3) + 0.5) * _delayMult;
+		var delay = (Math.pow(16, Math.random() - 1.3) + 0.6) * _delayMult;
+		// Using this workaround since timeouts dont seem to be work reliably in game
 		TweenLite.to(_dummyMC, delay, {_alpha: 0, onComplete: makeTimeoutFinish, onCompleteParams: [this]});
-		// setTimeout(Delegate.create(this, createEvent), delay * 1000);
-		// loopID = setInterval(this, "createEvent", delay * 1000)
 	}
 	public function makeTimeoutFinish(mc: MovieClip)
 	{
