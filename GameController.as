@@ -11,7 +11,7 @@ import JSON;
 
 class GameController extends MovieClip
 {
-	public static var CONFIG_PATH: String = "QTR_Settings.json";
+	public static var CONFIG_PATH: String = "Settings.json";
 
 	/* SKSE */
 	public var sendModEvent: Function;
