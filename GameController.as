@@ -96,10 +96,10 @@ class GameController extends MovieClip
 
 				// Settings
 				var settings = o.Multipliers;
-				me._damageMult = Math.max(settings.Damage != undefined ? settings.Damage : 0.10, 0.00);
-				me._regenMult =	Math.max(settings.Regeneration != undefined ? settings.Regeneration : 0.10, 0.00);
-				me._delayMult = clamp(settings.Delay != undefined ? settings.Delay : 0.10, 0.5, 2.0);
-				me._reactMult =	clamp(settings.Time != undefined ? settings.Time : 0.10, 0.5, 5);
+				me._damageMult = Math.max(settings.Damage != undefined ? settings.Damage : 1.0, 0.00);
+				me._regenMult =	Math.max(settings.Regeneration != undefined ? settings.Regeneration : 1.0, 0.00);
+				me._delayMult = clamp(settings.Delay != undefined ? settings.Delay : 1.0, 0.5, 2.0);
+				me._reactMult =	clamp(settings.Time != undefined ? settings.Time : 1.0, 0.5, 5);
 				me._eventCountAdd =	settings.Events != undefined ? settings.Events : 0;
 
 				// Key Codes
